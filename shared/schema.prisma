@@ -1,0 +1,112 @@
+// --- ENUMS ---
+enum Currency {
+  SOL
+  SKR
+}
+
+enum MatchStatus {
+  ONGOING
+  FINISHED
+  CANCELLED
+}
+
+enum Role {
+  WOLF
+  CITIZEN
+  PENDING
+}
+
+enum TransactionType {
+  DEPOSIT_STANDARD
+  DEPOSIT_PREMIUM
+  PAYOUT
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+// --- CONFIGURATION ---
+model SystemConfig {
+  id                String   @id @default("global") // Only one row ever exists
+  platformFeePct    Float    @default(5.0) // 5%
+  premiumWolfFeeAmt BigInt   // The extra raw amount required to queue as Wolf
+  matchTimeoutSecs  Int      @default(120) // 2 minutes before AI bots fill
+  updatedAt         DateTime @updatedAt
+}
+
+// --- UPDATED TABLES ---
+model User {
+  id              String   @id @default(uuid())
+  walletAddress   String   @unique
+  name            String?
+  email           String?  
+  priorityScore   Int      @default(0) 
+  
+  totalSolWon     BigInt   @default(0)
+  totalSkrWon     BigInt   @default(0)
+  
+  gamesPlayed     GamePlayer[]
+  transactions    Transaction[]
+}
+
+model QueueEntry {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  currency        Currency 
+  intent          Role     // What did they pay for? WOLF or CITIZEN
+  joinedAt        DateTime @default(now())
+}
+
+model Game {
+  id              String      @id @default(uuid())
+  status          MatchStatus @default(ONGOING)
+  currency        Currency   
+  potAmount       BigInt   
+  winnerRole      Role?      
+  
+  timeLimit       Int      
+  totalRounds     Int         @default(0)
+  
+  players         GamePlayer[]
+  transactions    Transaction[]
+  
+  startTime       DateTime    @default(now())
+  endTime         DateTime?
+}
+
+model GamePlayer {
+  id              String   @id @default(uuid())
+  gameId          String
+  userId          String
+  
+  role            Role     
+  isDead          Boolean  @default(false)
+  roundsSurvived  Int      @default(0)
+  winnings        BigInt   @default(0)
+  
+  game            Game     @relation(fields: [gameId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
+  
+  @@unique([gameId, userId]) 
+}
+
+model Transaction {
+  id              String            @id @default(uuid())
+  txSignature     String            @unique 
+  gameId          String?
+  userId          String
+  
+  type            TransactionType   
+  currency        Currency          
+  amount          BigInt   
+  status          TransactionStatus @default(PENDING)
+  
+  user            User              @relation(fields: [userId], references: [id])
+  game            Game?             @relation(fields: [gameId], references: [id])
+  
+  createdAt       DateTime          @default(now())
+}
