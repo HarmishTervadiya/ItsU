@@ -1,13 +1,16 @@
 {
   "name": "@itsu/backend",
-  "module": "index.ts",
+  "module": "src/index.ts",
   "type": "module",
   "private": true,
   "dependencies": {
-    "@itsu/shared": "workspace:*"
+    "@itsu/shared": "workspace:*",
+    "@types/express": "^5.0.6",
+    "@types/express-serve-static-core": "5.1.1",
+    "express": "^5.2.1"
   },
   "scripts": {
-    "dev": "bun --watch index.ts",
+    "start": "bun --watch src/index.ts",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
