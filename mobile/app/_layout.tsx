@@ -1,3 +1,5 @@
+import "@/src/utils/polyfills";
+
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 import { useFonts } from "expo-font";
