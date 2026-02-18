@@ -21,5 +21,8 @@
   "devDependencies": {
     "turbo": "latest",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "bs58": "^6.0.0"
   }
 }

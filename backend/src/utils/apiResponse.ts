@@ -3,9 +3,9 @@ export class ApiSuccess {
   data: any;
   message: string;
 
-  constructor(success: boolean, data: any, message: string) {
-    this.success = success;
-    this.data = data;
+  constructor(data: any, message: string) {
+    Object.assign(this, data);
+    this.success = true;
     this.message = message;
   }
 }
