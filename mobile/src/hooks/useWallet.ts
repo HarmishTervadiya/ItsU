@@ -4,9 +4,11 @@ import {
   transact,
   Web3MobileWallet,
 } from "@solana-mobile/mobile-wallet-adapter-protocol-web3js";
-import axios from "axios";
 import bs58 from "bs58";
 import { setItem } from "../utils/secureStore";
+import { config } from "../config";
+import { apiClient } from "../utils/apiHandler";
+import { Toast } from "toastify-react-native";
 
 const APP_IDENTITY = {
   name: "ItsU",
@@ -14,7 +16,7 @@ const APP_IDENTITY = {
   asset: "favicon.png",
 };
 
-const API_URL = "http://192.168.54.44:3000";
+const API_URL = config.SERVER_URL;
 
 export const useWallet = () => {
   const [publicKey, setPublicKey] = useState<PublicKey | null>(null);
@@ -36,14 +38,9 @@ export const useWallet = () => {
         const walletAddress = pubkey.toBase58();
 
         // Retrieve nonce from server
-        const nonceRes = await axios.get(
+        const { nonce } = await apiClient.get<{ nonce: string }>(
           `${API_URL}/auth/nonce/${walletAddress}`,
         );
-
-        if (nonceRes.status != 200 && nonceRes.status != 201)
-          throw new Error("Failed to fetch nonce");
-
-        const nonce = nonceRes.data.nonce;
 
         // Create a message to send into wallet
         const expectedMessage = `Sign in into ItsU. Nonce: ${nonce}`;
@@ -60,26 +57,28 @@ export const useWallet = () => {
         const signatureBase58 = bs58.encode(signatureBytes);
 
         // Server check if the signature is valid or not
-        const verifyRes = await axios.post(`${API_URL}/auth/login`, {
+        const { accessToken, refreshToken } = await apiClient.post<{
+          accessToken: string;
+          refreshToken: string;
+        }>(`${API_URL}/auth/login`, {
           walletAddress,
           signature: signatureBase58,
         });
 
-        if (verifyRes.status !== 201 && verifyRes.status !== 200) {
-          throw new Error("Signature verification failed");
-        }
-
         // On success set the accessToken and publicKey
-        setItem("accessToken", verifyRes.data.accessToken);
+        setItem("accessToken", accessToken);
+        setItem("refreshToken", refreshToken);
         setItem("publicKey", pubkey.toString());
         setPublicKey(pubkey);
 
+        Toast.success("Login successful!");
         console.log("Login successful!");
 
         return authResult;
       });
     } catch (error: any) {
       console.error("Connect wallet failed:", error.message);
+      Toast.error("Someting went wrong");
       throw error;
     } finally {
       setConnecting(false);

@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend",
+      "type": "shell",
+      "command": "bun run server",
+      "presentation": {
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "App",
+      "type": "shell",
+      "command": "bun run app",
+      "presentation": {
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Run All",
+      "dependsOn": ["Backend", "App"],
+      "dependsOrder": "parallel"
+    }
+  ]
+}

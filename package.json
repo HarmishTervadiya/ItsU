@@ -16,13 +16,16 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "type-check": "turbo run type-check"
+    "type-check": "turbo run type-check",
+    "app": "cd mobile && bunx expo run android",
+    "server": "cd backend && bun start"
   },
   "devDependencies": {
     "turbo": "latest",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "bs58": "^6.0.0"
+    "bs58": "^6.0.0",
+    "zod": "^4.3.6"
   }
 }

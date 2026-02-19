@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "ItsU-API-definations",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

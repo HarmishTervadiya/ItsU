@@ -1,24 +1,25 @@
 import nacl from "tweetnacl";
-import bs58 from "bs58"; // Crucial for decoding Solana Base58 strings
+import bs58 from "bs58";
 import jwt from "jsonwebtoken";
 import { randomUUIDv7 } from "bun";
 import { config } from "../config";
 import { ApiError, ApiSuccess } from "../utils/apiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
 import { prisma } from "@itsu/shared/src/lib/prisma";
+import { logger } from "../utils/logger";
 
 const generateAccessAndRefreshToken = (id: string, name: string) => {
-  const accessToken = jwt.sign({ id, name }, config.JWT_SECRET, {
+  const accessToken = jwt.sign({ id, name }, config.JWT_ACCESS_SECRET, {
     expiresIn: "15m",
   });
-  const refreshToken = jwt.sign({ id }, config.JWT_SECRET, {
+  const refreshToken = jwt.sign({ id }, config.JWT_REFRESH_SECRET, {
     expiresIn: "20d",
   });
 
   return { refreshToken, accessToken };
 };
 
-export const getUserNonce = asyncHandler(async (req, res, next) => {
+export const getUserNonce = asyncHandler(async (req, res) => {
   const { walletAddress } = req.params;
   if (!walletAddress) {
     throw new ApiError(400, "BAD_REQUEST");
@@ -35,7 +36,6 @@ export const getUserNonce = asyncHandler(async (req, res, next) => {
       .json(new ApiSuccess(existingUser, "Nonce fetched successfully"));
   }
 
-  console.log(walletAddress);
   const newUser = await prisma.user.create({
     data: { walletAddress: walletAddress.toString() },
     select: { nonce: true },
@@ -46,7 +46,7 @@ export const getUserNonce = asyncHandler(async (req, res, next) => {
     .json(new ApiSuccess(newUser, "Account created successfully"));
 });
 
-export const login = asyncHandler(async (req, res, next) => {
+export const login = asyncHandler(async (req, res) => {
   const { walletAddress, signature } = req.body;
 
   if (!walletAddress || !signature) {
@@ -69,11 +69,9 @@ export const login = asyncHandler(async (req, res, next) => {
 
     // 2. Decode the Base58 wallet address into a public key byte array
     const publicKeyBytes = bs58.decode(walletAddress);
-
-    // 3. Decode the signature (assuming frontend sends it as a Base58 string)
     const signatureBytes = bs58.decode(signature);
 
-    // 4. Run the math
+    // 3. Decode the signature (assuming frontend sends it as a Base58 string)
     const isValid = nacl.sign.detached.verify(
       messageBytes,
       signatureBytes,
@@ -81,10 +79,10 @@ export const login = asyncHandler(async (req, res, next) => {
     );
 
     if (!isValid) {
+      logger.warn({ walletAddress }, "Invalid login signature attempt");
       throw new ApiError(401, "Invalid cryptographic signature");
     }
-  } catch (error) {
-    console.log("Error while verifying the signature", error);
+  } catch (error: any) {
     throw new ApiError(401, "Signature verification failed");
   }
 
@@ -101,7 +99,83 @@ export const login = asyncHandler(async (req, res, next) => {
     },
   });
 
+  logger.info({ userId: user.id }, "User logged in");
+
   return res
     .status(201)
-    .json(new ApiSuccess({accessToken}, "User logged in successfully"));
+    .cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      maxAge: 20 * 24 * 60 * 60 * 1000,
+    })
+    .json(
+      new ApiSuccess(
+        { accessToken, refreshToken },
+        "User logged in successfully",
+      ),
+    );
+});
+
+export const refreshAccessToken = asyncHandler(async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    throw new ApiError(400, "Refresh token is required");
+  }
+
+  let decodedRefreshToken: {
+    id: string;
+    iat: number;
+    exp: number;
+  };
+
+  try {
+    decodedRefreshToken = jwt.verify(
+      refreshToken,
+      config.JWT_REFRESH_SECRET,
+    ) as {
+      id: string;
+      iat: number;
+      exp: number;
+    };
+  } catch (error: any) {
+    throw new ApiError(401, "Invalid or expired refresh token");
+  }
+
+  if (!decodedRefreshToken?.id) {
+    throw new ApiError(400, "Invalid refresh token payload");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: decodedRefreshToken.id },
+    select: { id: true, name: true, refreshToken: true },
+  });
+
+  if (!user) {
+    throw new ApiError(404, "User does not exist");
+  }
+
+  if (user.refreshToken !== refreshToken) {
+    logger.warn({ userId: user.id }, "Refresh token reuse/mismatch detected");
+    throw new ApiError(401, "Refresh token mismatch");
+  }
+
+  const { accessToken, refreshToken: newRefreshToken } =
+    generateAccessAndRefreshToken(user.id, user.name || "");
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken: newRefreshToken },
+  });
+
+  logger.info({ userId: user.id }, "Token refreshed successfully");
+
+  return res
+    .status(200)
+    .json(
+      new ApiSuccess(
+        { accessToken, refreshToken: newRefreshToken },
+        "Token refreshed successfully",
+      ),
+    );
 });

@@ -2,6 +2,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useWallet } from "@/src/hooks/useWallet";
+import ToastManager from "toastify-react-native";
 
 export default function HomeScreen() {
   const wallet = useWallet();
@@ -15,6 +16,7 @@ export default function HomeScreen() {
           <Text>Connect Wallet</Text>
         </TouchableOpacity>
       </View>
+      <ToastManager />
     </SafeAreaView>
   );
 }

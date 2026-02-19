@@ -6,7 +6,6 @@ export const getItem = (key: string) => {
 
 export const setItem = (key: string, data: string) => {
   SecureStore.setItem(key, data);
-  
 };
 
 export const deleteItem = async (key: string) => {
