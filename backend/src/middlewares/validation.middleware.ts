@@ -6,11 +6,11 @@ import { logger } from "../utils/logger";
 export const validateReqBody = (schema: z.ZodType) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      logger.debug({ path: req.originalUrl }, `[Body Validation] Initiated`);
+      logger.debug({ path: req.originalUrl, body: req.body }, `[Body Validation] Initiated`);
 
       const result = schema.safeParse(req.body);
       if (!result.success) {
-        return next(new ApiError(400, "Invalid request body"));
+        return next(new ApiError(400,  `Invalid request body ${JSON.stringify(result.error.flatten())}`));
       }
 
       req.body = result.data;
@@ -18,6 +18,7 @@ export const validateReqBody = (schema: z.ZodType) => {
       logger.debug(`[Body Validation] Completed`);
       next();
     } catch (error: any) {
+      logger.debug("[Body Validation]")
       next(new ApiError(400, error.message));
     }
   };

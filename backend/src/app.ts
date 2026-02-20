@@ -5,6 +5,7 @@ import express, {
 } from "express";
 import { config } from "./config";
 import authRouter from "./routes/auth.routes";
+import userRouter from "./routes/user.routes";
 import { logger } from "./utils/logger";
 
 const app = express();
@@ -12,6 +13,7 @@ const app = express();
 app.use(express.json());
 
 app.use("/api/auth", authRouter);
+app.use("/api/user", userRouter);
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   const statusCode = err.statusCode || 500;

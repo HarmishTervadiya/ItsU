@@ -10,7 +10,7 @@ import { logger } from "../utils/logger";
 
 const generateAccessAndRefreshToken = (id: string, name: string) => {
   const accessToken = jwt.sign({ id, name }, config.JWT_ACCESS_SECRET, {
-    expiresIn: "15m",
+    expiresIn: "1d",
   });
   const refreshToken = jwt.sign({ id }, config.JWT_REFRESH_SECRET, {
     expiresIn: "20d",
@@ -47,7 +47,7 @@ export const getUserNonce = asyncHandler(async (req, res) => {
 });
 
 export const login = asyncHandler(async (req, res) => {
-  const { walletAddress, signature } = req.body;
+  const { walletAddress, signature, timezone } = req.body;
 
   if (!walletAddress || !signature) {
     throw new ApiError(400, "Wallet address and signature are required");
@@ -95,6 +95,7 @@ export const login = asyncHandler(async (req, res) => {
     where: { id: user.id },
     data: {
       refreshToken,
+      timezone,
       nonce: randomUUIDv7(), // Rotating the nonce to prevent replay attacks
     },
   });

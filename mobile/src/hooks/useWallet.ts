@@ -9,6 +9,7 @@ import { setItem } from "../utils/secureStore";
 import { config } from "../config";
 import { apiClient } from "../utils/apiHandler";
 import { Toast } from "toastify-react-native";
+import { getCalendars } from "expo-localization";
 
 const APP_IDENTITY = {
   name: "ItsU",
@@ -60,9 +61,11 @@ export const useWallet = () => {
         const { accessToken, refreshToken } = await apiClient.post<{
           accessToken: string;
           refreshToken: string;
+          timezone: string;
         }>(`${API_URL}/auth/login`, {
           walletAddress,
           signature: signatureBase58,
+          timezone: getCalendars()[0].timeZone || "UTC",
         });
 
         // On success set the accessToken and publicKey

@@ -137,7 +137,7 @@ api.interceptors.response.use(
         isRefreshing = false;
         refreshSubscribers = [];
 
-        Toast.error("Something wen wrong");
+        Toast.error("Something went wrong");
         return Promise.reject(refreshError);
       }
     }
