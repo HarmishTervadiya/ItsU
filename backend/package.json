@@ -5,6 +5,7 @@
   "private": true,
   "dependencies": {
     "@itsu/shared": "workspace:*",
+    "@solana/web3.js": "^1.98.4",
     "@types/express": "^5.0.6",
     "@types/express-serve-static-core": "5.1.1",
     "@types/jsonwebtoken": "^9.0.10",

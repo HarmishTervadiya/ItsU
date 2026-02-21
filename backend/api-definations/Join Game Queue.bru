@@ -1,0 +1,26 @@
+meta {
+  name: Join Game Queue
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/games/queue/join
+  body: json
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "signature": "2SsCKctfBjorG2ejjfSwyb5oTqRpb8GBjH4Dukg9qM7PaWF8yRFzxEC2R2NkseX8ZXMtDKqGT7R5dix4UiZAThcV"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

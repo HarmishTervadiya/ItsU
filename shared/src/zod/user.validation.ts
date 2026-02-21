@@ -2,7 +2,7 @@ import * as z from "zod";
 
 export const updateUserSchema = z
   .object({
-    name: z.string().optional(),
+    name: z.string().min(2).optional(),
     email: z.string().email().optional(),
     timezone: z
   .string()

@@ -10,6 +10,7 @@ export const validateReqBody = (schema: z.ZodType) => {
 
       const result = schema.safeParse(req.body);
       if (!result.success) {
+        //Todo: remove the stringfy error from the interpolation
         return next(new ApiError(400,  `Invalid request body ${JSON.stringify(result.error.flatten())}`));
       }
 

@@ -1,0 +1,28 @@
+meta {
+  name: Update User Data
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/user/
+  body: json
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "name": "",
+    "email": "",
+    "timezone": ""
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

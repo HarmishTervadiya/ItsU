@@ -1,8 +1,8 @@
 import * as z from "zod";
 
 export const loginSchema = z.object({
-  walletAddress: z.string(),
-  signature: z.string(),
+  walletAddress: z.string().min(1, "Wallet address cannot be empty"),
+  signature: z.string().min(1, "Signature cannot be empty"),
     timezone: z
   .string()
   .trim()

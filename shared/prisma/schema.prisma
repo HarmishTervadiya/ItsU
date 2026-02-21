@@ -28,6 +28,7 @@ enum MatchStatus {
   ONGOING
   FINISHED
   CANCELLED
+  SERVER_ERROR
 }
 
 enum Role {
@@ -90,22 +91,40 @@ model QueueEntry {
 }
 
 model Game {
-  id         String      @id @default(uuid())
-  status     MatchStatus @default(ONGOING)
-  currency   Currency
-  potAmount  BigInt
-  winnerRole Role?
-
+  id          String      @id @default(uuid())
+  status      MatchStatus @default(ONGOING)
+  currency    Currency
+  potAmount   BigInt
+  winnerRole  Role?
+  item        String
+  hint        String
   timeLimit   Int
-  totalRounds Int @default(0)
-
-  players      GamePlayer[]
-  transactions Transaction[]
+  totalRounds Int         @default(0)
 
   startTime DateTime  @default(now())
   endTime   DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  // relations
+  players      GamePlayer[]
+  transactions Transaction[]
+  wordPair     Item          @relation(fields: [itemId], references: [id])
+  itemId       String
+}
+
+model Item {
+  id       String   @id @default(uuid())
+  name     String
+  category String?
+  hints    String[]
+  isActive Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relations
+  games Game[]
 }
 
 model GamePlayer {
@@ -128,7 +147,8 @@ model GamePlayer {
 
 model Transaction {
   id          String  @id @default(uuid())
-  txSignature String  @unique
+  txSignature String? @unique
+  reference   String  @unique
   gameId      String?
   userId      String
 
