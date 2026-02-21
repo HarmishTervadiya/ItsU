@@ -8,6 +8,7 @@ import {
 } from "@solana/web3.js";
 import { logger } from "../utils/logger";
 import { prisma } from "@itsu/shared/src/lib/prisma";
+import { startMatchMaker } from "../workers/matchmaker";
 
 // Todo: Change this with env or db config
 const destination = "9uUYYvkEjEQTd7T5VgqEFkiWgFnTsRfiDqVEdwz5BEDS";
@@ -105,6 +106,7 @@ export const pushToGameQueue = asyncHandler(async (req, res) => {
     "[Join Queue] Successfully created new queue entry",
   );
 
+  startMatchMaker()
   return res
     .status(201)
     .json(new ApiSuccess(newQueueEntry, "Successfully pushed to queue"));

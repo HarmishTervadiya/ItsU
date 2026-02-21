@@ -96,7 +96,7 @@ model Game {
   currency    Currency
   potAmount   BigInt
   winnerRole  Role?
-  item        String
+  itemName    String
   hint        String
   timeLimit   Int
   totalRounds Int         @default(0)
@@ -109,7 +109,7 @@ model Game {
   // relations
   players      GamePlayer[]
   transactions Transaction[]
-  wordPair     Item          @relation(fields: [itemId], references: [id])
+  item         Item          @relation(fields: [itemId], references: [id])
   itemId       String
 }
 

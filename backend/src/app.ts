@@ -8,11 +8,12 @@ import authRouter from "./routes/auth.routes";
 import userRouter from "./routes/user.routes";
 import gamesRouter from "./routes/games.routes";
 import transactionsRouter from "./routes/transactions.routes";
-
-
+import { matchMaker } from "./workers/matchmaker";
 import { logger } from "./utils/logger";
 
 const app = express();
+
+matchMaker()
 
 app.use(express.json());
 
