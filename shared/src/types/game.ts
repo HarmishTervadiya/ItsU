@@ -10,6 +10,8 @@ export interface GameState {
     isDead: boolean;
     isBot: boolean;
   }[];
+  item: string,
+  hint: string,
   chat: { senderId: string; text: string; timestamp: number }[];
   votes: Record<string, string>;
   totalRounds: number;

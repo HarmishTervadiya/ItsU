@@ -10,10 +10,16 @@ import gamesRouter from "./routes/games.routes";
 import transactionsRouter from "./routes/transactions.routes";
 import { matchMaker } from "./workers/matchmaker";
 import { logger } from "./utils/logger";
+import { gameManager } from "./state/gameStore";
+import { BotEngine } from "./workers/botEngine";
 
 const app = express();
 
-matchMaker()
+matchMaker();
+gameManager.onStateChange = (gameId, state) => {
+  //TODO: Implement WebSocket broadcasting here
+  BotEngine.handleStateChange(gameId, state);
+};
 
 app.use(express.json());
 
@@ -21,7 +27,6 @@ app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/games", gamesRouter);
 app.use("/api/transactions", transactionsRouter);
-
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   const statusCode = err.statusCode || 500;

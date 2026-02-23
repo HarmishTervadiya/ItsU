@@ -106,8 +106,65 @@ export const pushToGameQueue = asyncHandler(async (req, res) => {
     "[Join Queue] Successfully created new queue entry",
   );
 
-  startMatchMaker()
+  startMatchMaker();
   return res
     .status(201)
     .json(new ApiSuccess(newQueueEntry, "Successfully pushed to queue"));
+});
+
+export const getUserGameHistory = asyncHandler(async (req, res) => {
+  const userId = req.user?.id;
+
+  logger.debug(
+    { path: req.originalUrl },
+    "[User Game History] Fetching initated ",
+  );
+  const gamesHistory = await prisma.gamePlayer.findMany({
+    where: { userId },
+    select: {
+      gameId: true,
+      role: true,
+      isDead: true,
+      roundsSurvived: true,
+      winnings: true,
+      game: {
+        select: {
+          currency: true,
+          potAmount: true,
+          winnerRole: true,
+          totalRounds: true,
+          startTime: true,
+          endTime: true,
+        },
+      },
+    },
+    orderBy: {
+      game: {
+        startTime: "desc",
+      },
+    },
+  });
+
+  const userGames = gamesHistory.map((item) => ({
+    gameId: item.gameId,
+    role: item.role,
+    isDead: item.isDead,
+    roundsSurvived: item.roundsSurvived,
+    winnings: item.winnings,
+    Currency: item.game.currency,
+    potAmount: item.game.potAmount,
+    totalRounds: item.game.totalRounds,
+    winnerRole: item.game.winnerRole,
+    startTime: item.game.startTime,
+    endTime: item.game.endTime,
+  }));
+
+  logger.debug(
+    { path: req.originalUrl },
+    "[User Game History] Fetching successful ",
+  );
+
+  return res
+    .status(200)
+    .json(new ApiSuccess(userGames, "User game history fetched successfully"));
 });
