@@ -1,16 +1,14 @@
-import { useState, useCallback } from "react";
-import { clusterApiUrl, Connection, PublicKey } from "@solana/web3.js";
+import { useState } from "react";
+import { PublicKey } from "@solana/web3.js";
 import {
   transact,
   Web3MobileWallet,
 } from "@solana-mobile/mobile-wallet-adapter-protocol-web3js";
 import bs58 from "bs58";
 import { setItem } from "../utils/secureStore";
-import { config } from "../config";
-import { apiClient } from "../utils/apiHandler";
 import { Toast } from "toastify-react-native";
-import { getCalendars } from "expo-localization";
-import { getNonceApi, loginApi } from "../api/auth";
+import { getNonceApi } from "../api/auth";
+import { useAuthStore } from "../stores/authStore";
 
 const APP_IDENTITY = {
   name: "ItsU",
@@ -18,13 +16,12 @@ const APP_IDENTITY = {
   asset: "favicon.png",
 };
 
-const API_URL = config.SERVER_URL;
-
 export const useWallet = () => {
-  const [publicKey, setPublicKey] = useState<PublicKey | null>(null);
+  const publicKey = useAuthStore((s) => s.publicKey);
+  const setPublicKey = useAuthStore((s) => s.setPublicKey);
   const [connecting, setConnecting] = useState<boolean>(false);
-  const cluster = "mainnet-beta";
-  const connection = new Connection(clusterApiUrl(cluster), "confirmed");
+  const cluster = "devnet";
+  const login = useAuthStore((s) => s.login);
 
   const signInWithSolana = async () => {
     setConnecting(true);
@@ -61,16 +58,13 @@ export const useWallet = () => {
         const signatureBytes = signedMessages[0];
         const signatureBase58 = bs58.encode(signatureBytes);
 
-        const { data, success, error } = await loginApi({
-          walletAddress,
-          signature: signatureBase58,
-          timezone: getCalendars()[0].timeZone || "UTC",
-        });
+        const success = await login(walletAddress, signatureBase58);
 
-        if (!success) throw new Error(error!);
-        // On success set the accessToken and publicKey
-        setItem("accessToken", data?.accessToken!);
-        setItem("refreshToken", data?.refreshToken!);
+        if (!success) {
+          throw new Error("Login failed");
+        }
+
+        // On success set the publicKey
         setItem("publicKey", pubkey.toString());
         setPublicKey(pubkey);
 

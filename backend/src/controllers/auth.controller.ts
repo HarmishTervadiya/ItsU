@@ -59,7 +59,13 @@ export const login = asyncHandler(async (req, res) => {
 
   const user = await prisma.user.findUnique({
     where: { walletAddress },
-    select: { id: true, name: true, nonce: true },
+    select: {
+      id: true,
+      name: true,
+      nonce: true,
+      email: true,
+      walletAddress: true,
+    },
   });
 
   if (!user) {
@@ -123,7 +129,14 @@ export const login = asyncHandler(async (req, res) => {
     })
     .json(
       new ApiSuccess(
-        { accessToken, refreshToken },
+        {
+          accessToken,
+          refreshToken,
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          walletAddress: user.walletAddress,
+        },
         "User logged in successfully",
       ),
     );
@@ -195,12 +208,13 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
 
   logger.info({ userId: user.id }, "Token refreshed successfully");
 
-  return res
-    .status(200)
-    .json(
-      new ApiSuccess(
-        { accessToken, refreshToken: newRefreshToken },
-        "Token refreshed successfully",
-      ),
-    );
+  return res.status(200).json(
+    new ApiSuccess(
+      {
+        accessToken,
+        refreshToken: newRefreshToken,
+      },
+      "Token refreshed successfully",
+    ),
+  );
 });
