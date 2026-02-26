@@ -22,7 +22,7 @@ const generateAccessAndRefreshToken = (id: string, name: string) => {
 export const getUserNonce = asyncHandler(async (req, res) => {
   const { walletAddress } = req.params;
   if (!walletAddress) {
-    throw new ApiError(400, "BAD_REQUEST");
+    throw new ApiError(400, "BAD_REQUEST", "BAD_REQUEST");
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -50,7 +50,11 @@ export const login = asyncHandler(async (req, res) => {
   const { walletAddress, signature, timezone } = req.body;
 
   if (!walletAddress || !signature) {
-    throw new ApiError(400, "Wallet address and signature are required");
+    throw new ApiError(
+      400,
+      "BAD_REQUEST",
+      "Wallet address and signature are required",
+    );
   }
 
   const user = await prisma.user.findUnique({
@@ -59,7 +63,7 @@ export const login = asyncHandler(async (req, res) => {
   });
 
   if (!user) {
-    throw new ApiError(404, "User does not exist");
+    throw new ApiError(404, "WALLET_NOT_FOUND", "User does not exist");
   }
 
   try {
@@ -80,10 +84,18 @@ export const login = asyncHandler(async (req, res) => {
 
     if (!isValid) {
       logger.warn({ walletAddress }, "Invalid login signature attempt");
-      throw new ApiError(401, "Invalid cryptographic signature");
+      throw new ApiError(
+        401,
+        "SIGNATURE_EXPIRED",
+        "Invalid cryptographic signature",
+      );
     }
   } catch (error: any) {
-    throw new ApiError(401, "Signature verification failed");
+    throw new ApiError(
+      401,
+      "SIGNATURE_EXPIRED",
+      "Signature verification failed",
+    );
   }
 
   const { accessToken, refreshToken } = generateAccessAndRefreshToken(
@@ -121,7 +133,11 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    throw new ApiError(400, "Refresh token is required");
+    throw new ApiError(
+      400,
+      "INVALID_ACCESS_TOKEN",
+      "Refresh token is required",
+    );
   }
 
   let decodedRefreshToken: {
@@ -140,11 +156,19 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
       exp: number;
     };
   } catch (error: any) {
-    throw new ApiError(401, "Invalid or expired refresh token");
+    throw new ApiError(
+      401,
+      "INVALID_ACCESS_TOKEN",
+      "Invalid or expired refresh token",
+    );
   }
 
   if (!decodedRefreshToken?.id) {
-    throw new ApiError(400, "Invalid refresh token payload");
+    throw new ApiError(
+      400,
+      "INVALID_ACCESS_TOKEN",
+      "Invalid refresh token payload",
+    );
   }
 
   const user = await prisma.user.findUnique({
@@ -153,12 +177,12 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   });
 
   if (!user) {
-    throw new ApiError(404, "User does not exist");
+    throw new ApiError(404, "WALLET_NOT_FOUND", "User does not exist");
   }
 
   if (user.refreshToken !== refreshToken) {
     logger.warn({ userId: user.id }, "Refresh token reuse/mismatch detected");
-    throw new ApiError(401, "Refresh token mismatch");
+    throw new ApiError(401, "INVALID_ACCESS_TOKEN", "Refresh token mismatch");
   }
 
   const { accessToken, refreshToken: newRefreshToken } =

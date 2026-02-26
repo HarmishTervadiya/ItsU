@@ -19,7 +19,7 @@ export const updateUserData = asyncHandler(async (req, res) => {
   });
 
   if (!updatedUser) {
-    throw new ApiError(500, "Internal Server Error");
+    throw new ApiError(500, "INTERNAL_SERVER_ERROR", "Internal Server Error");
   }
 
   logger.debug({ path: req.originalUrl }, "[Update User] Completed");

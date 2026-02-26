@@ -88,7 +88,6 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     console.debug(`[API Response] ${response.status} ${response.config.url}`);
-    Toast.success(response.data.message);
     return response.data.data ?? response.data;
   },
   async (error: AxiosError) => {
@@ -141,8 +140,6 @@ api.interceptors.response.use(
         return Promise.reject(refreshError);
       }
     }
-
-    Toast.error(`Something went wrong ${error.message}`);
     return Promise.reject(error);
   },
 );

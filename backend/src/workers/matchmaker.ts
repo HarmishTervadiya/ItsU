@@ -46,7 +46,8 @@ export async function matchMaker() {
     const userIds = selectedEntries.map((e) => e.userId);
     const itemsCount = await prisma.item.count({ where: { isActive: true } });
 
-    if (itemsCount === 0) throw new ApiError(500, "No active items found");
+    if (itemsCount === 0)
+      throw new ApiError(500, "NO_ACTIVE_ITEMS", "No active items found");
 
     const randomItem = await prisma.item.findFirst({
       where: { isActive: true },

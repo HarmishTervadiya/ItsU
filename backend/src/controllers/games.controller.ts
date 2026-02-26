@@ -26,7 +26,7 @@ export const pushToGameQueue = asyncHandler(async (req, res) => {
   const transaction = await connection.getParsedTransaction(signature, config);
 
   if (!transaction) {
-    throw new ApiError(400, "Transaction not found");
+    throw new ApiError(400, "TRANSACTION_NOT_FOUND", "Transaction not found");
   }
 
   logger.debug(
@@ -39,10 +39,18 @@ export const pushToGameQueue = asyncHandler(async (req, res) => {
   });
 
   if (!existingTransaction)
-    throw new ApiError(404, "Transaction not found in database");
+    throw new ApiError(
+      404,
+      "TRANSACTION_NOT_FOUND",
+      "Transaction not found in database",
+    );
 
   if (existingTransaction.status !== "PENDING") {
-    throw new ApiError(400, "Transaction has already been processed.");
+    throw new ApiError(
+      400,
+      "TRANSACTION_ALREADY_PROCESSED",
+      "Transaction has already been processed.",
+    );
   }
 
   logger.debug(
@@ -67,7 +75,11 @@ export const pushToGameQueue = asyncHandler(async (req, res) => {
     !signatureInstruction ||
     signatureInstruction.parsed.info.destination !== destination
   ) {
-    throw new ApiError(400, "Invalid transaction details");
+    throw new ApiError(
+      400,
+      "INVALID_TRANSACTION",
+      "Invalid transaction details",
+    );
   }
 
   logger.debug(
@@ -98,7 +110,11 @@ export const pushToGameQueue = asyncHandler(async (req, res) => {
       where: { id: existingTransaction.id },
       data: { status: "FAILED" },
     });
-    throw new ApiError(500, "Failed to create new queue entry");
+    throw new ApiError(
+      500,
+      "INTERNAL_SERVER_ERROR",
+      "Failed to create new queue entry",
+    );
   }
 
   logger.debug(

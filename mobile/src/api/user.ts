@@ -1,12 +1,22 @@
-import * as z from "zod";
-import { updateUserSchema } from "@itsu/shared/zod/user.validation";
 import { Toast } from "toastify-react-native";
 import { apiClient } from "../utils/apiHandler";
+import { withApiErrorHandler } from "../utils/apiWrapper";
 
-export const updateUserData = async (data: any) => {
-  const res = await apiClient.patch("/user/", data);
+export interface UpdateUserDataPayload {
+  name?: string;
+  email?: string;
+  timezone?: string;
+}
 
-  console.info("User updated successfully");
-  Toast.success("User updated successfully");
-  return res;
+export interface UpdateUserDataResponse {
+  id: string;
+  name: string | null;
+  email: string | null;
+  timezone: string | null;
+}
+
+export const updateUserDataApi = (data: UpdateUserDataPayload) => {
+  return withApiErrorHandler<UpdateUserDataResponse>(() =>
+    apiClient.patch("/user/", data),
+  );
 };

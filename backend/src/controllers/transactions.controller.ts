@@ -22,7 +22,11 @@ export const addStakeTransaction = asyncHandler(async (req, res) => {
   });
 
   if (!insertedTransaction) {
-    throw new ApiError(500, "Something went wrong while inserting transaction");
+    throw new ApiError(
+      500,
+      "INTERNAL_SERVER_ERROR",
+      "Something went wrong while inserting transaction",
+    );
   }
 
   logger.debug(

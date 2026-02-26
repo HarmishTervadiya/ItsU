@@ -21,6 +21,7 @@
     "server": "cd backend && bun start"
   },
   "devDependencies": {
+    "prettier": "^3.8.1",
     "turbo": "latest",
     "typescript": "^5.9.3"
   },
