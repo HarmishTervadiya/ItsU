@@ -24,14 +24,9 @@ export const verifyJwt = (req: Request, res: Response, next: NextFunction) => {
       config.JWT_ACCESS_SECRET,
     ) as JwtUserPayload;
 
-    if (!decoded.id) {
-      return next(new ApiError(401, "Invalid Access Token"));
-    }
+    if (!decoded.id) return next(new ApiError(401, "Invalid Access Token"));
 
-    req.user = {
-      id: decoded.id,
-      name: decoded.name,
-    };
+    req.user = { id: decoded.id, name: decoded.name };
 
     next();
   } catch {

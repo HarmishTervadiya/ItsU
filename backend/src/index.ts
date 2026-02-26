@@ -1,6 +1,6 @@
-import { app } from "./app";
+import { server } from "./app";
 import { config } from "./config";
 
-app.listen(config.PORT, () => {
+server.listen(config.PORT, () => {
   console.log("Server started");
 });
