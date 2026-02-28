@@ -3,8 +3,7 @@ import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useWallet } from "@/src/hooks/useWallet";
 import ToastManager from "toastify-react-native";
-import { getCalendars } from "expo-localization";
-import { updateUserData } from "@/src/api/user";
+import { router } from "expo-router";
 
 export default function HomeScreen() {
   const wallet = useWallet();
@@ -20,16 +19,8 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        onPress={() =>
-          updateUserData({
-            name: "Test User",
-            email: "test@gmail.com",
-            timezone: getCalendars()[0].timeZone,
-          })
-        }
-      >
-        <Text>Update User Data</Text>
+      <TouchableOpacity onPress={() => router.push("/auth/login")}>
+        <Text>Go to Login</Text>
       </TouchableOpacity>
       <ToastManager />
     </SafeAreaView>
