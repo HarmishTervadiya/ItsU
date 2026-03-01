@@ -3,11 +3,19 @@ import "@/src/utils/polyfills";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import {
+  Redirect,
+  router,
+  Stack,
+  useNavigationContainerRef,
+  useRootNavigationState,
+} from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
 import "../global.css";
+import { useAuthStore } from "@/src/stores/authStore";
+import ToastManager from "toastify-react-native/components/ToastManager";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -28,18 +36,24 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
+  const hydrate = useAuthStore((s) => s.hydrate);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
+
+  useEffect(() => {
+    hydrate();
+  }, []);
+
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded && isHydrated) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, isHydrated]);
 
-  if (!loaded) {
+  if (!loaded || !isHydrated) {
     return null;
   }
 
@@ -47,11 +61,21 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: "#161623" },
+      }}
+    >
       <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-      <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+      <Stack.Protected guard={isAuthenticated}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+      </Stack.Protected>
+      <ToastManager />
     </Stack>
   );
 }

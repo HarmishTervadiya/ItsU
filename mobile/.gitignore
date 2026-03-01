@@ -43,3 +43,5 @@ yarn-error.*
 android
 
 .env
+
+docs

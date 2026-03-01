@@ -4,17 +4,19 @@ import { loginApi } from "../api/auth";
 import { getCalendars } from "expo-localization";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { deleteItem, setItem } from "../utils/secureStore";
+import { deleteItem, getItem, setItem } from "../utils/secureStore";
 import { PublicKey } from "@solana/web3.js";
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  isHydrated: boolean;
   isLoading: boolean;
   accessToken: string | null;
   refreshToken: string | null;
   publicKey: PublicKey | null;
 
+  hydrate: () => void;
   login: (walletAddress: string, signature: string) => Promise<boolean>;
   logout: () => void;
   setPublicKey: (publicKey: PublicKey | null) => void;
@@ -25,11 +27,21 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       isAuthenticated: false,
+      isHydrated: false,
       isLoading: false,
       accessToken: null,
       refreshToken: null,
       publicKey: null,
 
+      hydrate: async () => {
+        const accessToken = getItem("accessToken");
+        const refreshToken = getItem("accessToken");
+
+        set({
+          isAuthenticated: Boolean(accessToken && refreshToken),
+          isHydrated: true,
+        });
+      },
       login: async (walletAddress: string, signature: string) => {
         set({ isLoading: true });
 
@@ -78,6 +90,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           accessToken: null,
           refreshToken: null,
+          publicKey: null,
         });
       },
       setPublicKey: (publicKey: PublicKey | null) => {

@@ -4,10 +4,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useWallet } from "@/src/hooks/useWallet";
 import ToastManager from "toastify-react-native";
 import { router } from "expo-router";
+import { useAuthStore } from "@/src/stores/authStore";
 
 export default function HomeScreen() {
   const wallet = useWallet();
-
   return (
     <SafeAreaView className="flex">
       <View>
@@ -22,7 +22,7 @@ export default function HomeScreen() {
       <TouchableOpacity onPress={() => router.push("/auth/login")}>
         <Text>Go to Login</Text>
       </TouchableOpacity>
-      <ToastManager />
+      
     </SafeAreaView>
   );
 }
