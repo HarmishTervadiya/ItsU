@@ -6,11 +6,24 @@ import { useAuthStore } from "@/src/stores/authStore";
 import { LogOut, Gamepad2, Trophy, Wallet, Zap, History, Settings, ChevronRight, Siren } from "lucide-react-native";
 import CrewmateAvatar from "@/src/components/CrewmateAvatar";
 import GameButton from "@/src/components/GameButton";
+import { useRouter } from "expo-router";
+import { createPracticeGameApi } from "@/src/api/game";
+import { Toast } from "toastify-react-native";
 
 export default function GameHomeScreen() {
     const { user, logout } = useAuthStore();
+    const router = useRouter();
 
     const onStartGame = () => { console.log("Start Matchmaking"); };
+
+    const onPracticeGame = async () => {
+        const { data, success } = await createPracticeGameApi();
+        if (success && data?.gameId) {
+            router.push(`/game/${data.gameId}`);
+        } else {
+            Toast.error("Failed to start practice game");
+        }
+    };
 
     return (
         <SafeAreaView className="flex-1 bg-[#1a1a24]">
@@ -114,7 +127,10 @@ export default function GameHomeScreen() {
                 <View className="flex-row flex-wrap justify-between gap-y-4 z-10">
 
                     {/* Practice Panel */}
-                    <TouchableOpacity className="w-[48%] bg-panel border-4 border-[#12121A] rounded-3xl p-4 items-start shadow-[4px_4px_0_0_black]">
+                    <TouchableOpacity
+                        className="w-[48%] bg-panel border-4 border-[#12121A] rounded-3xl p-4 items-start shadow-[4px_4px_0_0_black]"
+                        onPress={onPracticeGame}
+                    >
                         <Zap size={32} color="#FACC15" className="mb-2" />
                         <Text className="font-black text-white text-lg mt-1">Practice</Text>
                         <View className="bg-yellow-500/20 px-2 py-0.5 rounded-full mt-1">

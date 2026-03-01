@@ -30,8 +30,12 @@ const io = new Server(server, {
 matchMaker();
 
 gameManager.onStateChange = (gameId, state) => {
-  io.to(gameId).emit("gameStateUpdated", state);
-  BotEngine.handleStateChange(gameId, state);
+  const serializedState = {
+    ...state,
+    potAmount: state.potAmount.toString(),
+  };
+
+  io.to(gameId).emit("gameStateUpdated", serializedState);
 };
 
 io.on("connection", async (socket) => {
@@ -46,7 +50,11 @@ io.on("connection", async (socket) => {
 
     const currentState = gameManager.getGame(gameId);
     if (currentState) {
-      socket.emit("gameStateUpdated", currentState);
+      const serializedState = {
+        ...currentState,
+        potAmount: currentState.potAmount.toString(),
+      };
+      socket.emit("gameStateUpdated", serializedState);
     }
   });
 

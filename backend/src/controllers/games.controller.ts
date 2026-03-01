@@ -9,6 +9,9 @@ import {
 import { logger } from "../utils/logger";
 import { prisma } from "@itsu/shared/src/lib/prisma";
 import { startMatchMaker } from "../workers/matchmaker";
+import { gameManager } from "../state/gameStore";
+import { Role } from "@itsu/shared/generated/prisma/enums";
+import { v4 as uuidv4 } from "uuid";
 
 // Todo: Change this with env or db config
 const destination = "9uUYYvkEjEQTd7T5VgqEFkiWgFnTsRfiDqVEdwz5BEDS";
@@ -183,4 +186,78 @@ export const getUserGameHistory = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiSuccess(userGames, "User game history fetched successfully"));
+});
+
+export const createPracticeGame = asyncHandler(async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new ApiError(401, "UNAUTHORIZED", "User not found");
+  }
+
+  logger.debug(
+    { path: req.originalUrl },
+    "[Practice Game] Creating practice game",
+  );
+
+  const itemsCount = await prisma.item.count({ where: { isActive: true } });
+  if (itemsCount === 0) {
+    throw new ApiError(500, "NO_ACTIVE_ITEMS", "No active items found");
+  }
+
+  const randomItem = await prisma.item.findFirst({
+    where: { isActive: true },
+    skip: Math.floor(Math.random() * itemsCount),
+  });
+
+  const randomHint =
+    randomItem!.hints[Math.floor(Math.random() * randomItem!.hints.length)];
+  const gameId = `practice_${uuidv4()}`;
+
+  const inMemoryPlayers = [];
+  const wolfIndex = Math.floor(Math.random() * 6);
+
+  for (let i = 0; i < 6; i++) {
+    const assignedRole = i === wolfIndex ? Role.WOLF : Role.CITIZEN;
+    if (i === 0) {
+      inMemoryPlayers.push({
+        playerId: userId,
+        role: assignedRole,
+        isDead: false,
+        isBot: false,
+      });
+    } else {
+      inMemoryPlayers.push({
+        playerId: `bot_${uuidv4()}`,
+        role: assignedRole,
+        isDead: false,
+        isBot: true,
+      });
+    }
+  }
+
+  // Shuffle players so human isn't always player 1 in UI
+  inMemoryPlayers.sort(() => Math.random() - 0.5);
+
+  gameManager.createGame(gameId, {
+    id: gameId,
+    status: "LOBBY",
+    currency: "SOL",
+    potAmount: 0n,
+    phaseEndTime: Date.now() + 30000,
+    players: inMemoryPlayers,
+    item: randomItem!.name,
+    hint: randomHint!,
+    chat: [],
+    votes: {},
+    totalRounds: 0,
+    round: 1,
+    lastActivity: Date.now(),
+    isPractice: true,
+  });
+
+  logger.debug(`Practice Game ${gameId} initialized with 1 Human, 5 Bots.`);
+
+  return res
+    .status(201)
+    .json(new ApiSuccess({ gameId }, "Practice game created successfully"));
 });

@@ -122,6 +122,7 @@ export async function matchMaker() {
       chat: [],
       votes: {},
       totalRounds: 0,
+      round: 1,
       lastActivity: Date.now(),
     });
 

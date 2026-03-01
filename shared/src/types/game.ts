@@ -1,19 +1,28 @@
 export interface GameState {
   id: string;
-  status: 'LOBBY' | 'CHAT_PHASE' | 'NIGHT_PHASE' | 'VOTE_PHASE' | 'FINISHED' | 'FAILED';
-  currency: 'SOL' | 'SKR';
+  status:
+    | "LOBBY"
+    | "CHAT_PHASE"
+    | "NIGHT_PHASE"
+    | "VOTE_PHASE"
+    | "FINISHED"
+    | "FAILED";
+  currency: "SOL" | "SKR";
   potAmount: bigint;
-  phaseEndTime: number; 
+  phaseEndTime: number;
   players: {
     playerId: string;
-    role: 'WOLF' | 'CITIZEN';
+    role: "WOLF" | "CITIZEN";
     isDead: boolean;
     isBot: boolean;
   }[];
-  item: string,
-  hint: string,
+  item: string;
+  hint: string;
   chat: { senderId: string; text: string; timestamp: number }[];
   votes: Record<string, string>;
   totalRounds: number;
-  lastActivity: number
+  lastActivity: number;
+  isPractice?: boolean;
+  round: number;
+  winnerRole?: "WOLF" | "CITIZEN";
 }
