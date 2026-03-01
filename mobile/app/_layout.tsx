@@ -6,6 +6,7 @@ import { useFonts } from "expo-font";
 import {
   router,
   Stack,
+  useRootNavigationState,
   useSegments,
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -19,10 +20,6 @@ export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from "expo-router";
-
-export const unstable_settings = {
-  initialRouteName: "auth/login",
-};
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -60,8 +57,11 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const segments = useSegments();
+  const rootNavigationState = useRootNavigationState();
 
   useEffect(() => {
+    if (!rootNavigationState?.key || !segments.length) return;
+
     const inAuthGroup = segments[0] === "auth";
 
     if (isAuthenticated && inAuthGroup) {
@@ -71,22 +71,23 @@ function RootLayoutNav() {
       if (router.canDismiss()) router.dismissAll();
       router.replace("/auth/login");
     }
-  }, [isAuthenticated, segments]);
+  }, [isAuthenticated, segments, rootNavigationState?.key]);
+
+  const initialRoute = isAuthenticated ? "game" : "auth/login";
 
   return (
     <GestureHandlerRootView>
       <Stack
+        initialRouteName={initialRoute}
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: "#161623" },
         }}
-
       >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-        <Stack.Protected guard={isAuthenticated}>
-          <Stack.Screen name="game" />
-          <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-        </Stack.Protected>
+        <Stack.Screen name="game" />
+        <Stack.Screen name="modal" options={{ presentation: "modal" }} />
       </Stack>
     </GestureHandlerRootView>
   );
