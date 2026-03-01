@@ -4,11 +4,9 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 import { useFonts } from "expo-font";
 import {
-  Redirect,
   router,
   Stack,
-  useNavigationContainerRef,
-  useRootNavigationState,
+  useSegments,
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -16,6 +14,7 @@ import "react-native-reanimated";
 import "../global.css";
 import { useAuthStore } from "@/src/stores/authStore";
 import ToastManager from "toastify-react-native/components/ToastManager";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -23,7 +22,6 @@ export {
 } from "expo-router";
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: "auth/login",
 };
 
@@ -62,20 +60,32 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const segments = useSegments();
+
+  useEffect(() => {
+    const inAuthGroup = segments[0] === "auth";
+
+    if (isAuthenticated && inAuthGroup) {
+      router.replace("/");
+    } else if (!isAuthenticated && !inAuthGroup) {
+      router.replace("/auth/login");
+    }
+  }, [isAuthenticated, segments]);
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: "#161623" },
-      }}
-    >
-      <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-      <Stack.Protected guard={isAuthenticated}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-      </Stack.Protected>
-      <ToastManager />
-    </Stack>
+    <GestureHandlerRootView>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: "#161623" },
+        }}
+      >
+        <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+        <Stack.Protected guard={isAuthenticated}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+        </Stack.Protected>
+      </Stack>
+    </GestureHandlerRootView>
   );
 }

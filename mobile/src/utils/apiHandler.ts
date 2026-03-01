@@ -14,7 +14,7 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
 }
 
 const api = axios.create({
-  baseURL: config.SERVER_URL,
+  baseURL: `${config.SERVER_URL}/api`,
 });
 
 let isRefreshing = false;
@@ -39,7 +39,7 @@ const refreshToken = async (): Promise<string> => {
 
   try {
     const res = await axios.post(
-      `${config.SERVER_URL}/auth/refreshAccessToken`,
+      `${config.SERVER_URL}/api/auth/refreshAccessToken`,
       {
         refreshToken: storedRefreshToken,
       },
@@ -94,7 +94,8 @@ api.interceptors.response.use(
     const originalRequest = error.config as CustomAxiosRequestConfig;
 
     console.warn(
-      `[API Response Error] ${error.response?.status} for ${originalRequest.url}`,
+      `[API Response Interceptor Error] ${error.response?.status} for ${originalRequest.url}`,
+      error,
     );
 
     if (error.response?.status === 401 && !originalRequest._retry) {

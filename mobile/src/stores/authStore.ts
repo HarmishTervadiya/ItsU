@@ -35,11 +35,13 @@ export const useAuthStore = create<AuthState>()(
 
       hydrate: async () => {
         const accessToken = getItem("accessToken");
-        const refreshToken = getItem("accessToken");
+        const refreshToken = getItem("refreshToken");
+        const storedPublicKey = getItem("publicKey");
 
         set({
           isAuthenticated: Boolean(accessToken && refreshToken),
           isHydrated: true,
+          publicKey: storedPublicKey ? new PublicKey(storedPublicKey) : null,
         });
       },
       login: async (walletAddress: string, signature: string) => {
@@ -100,6 +102,11 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "itsu-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+      }),
     },
   ),
 );

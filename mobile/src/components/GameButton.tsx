@@ -1,5 +1,12 @@
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+} from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 interface GameButtonProps {
   children: React.ReactNode;
@@ -8,6 +15,8 @@ interface GameButtonProps {
   className?: string;
   icon?: React.ReactNode;
   fullWidth?: boolean;
+  loading?: boolean;
+  disabled?: boolean;
 }
 
 export const GameButton = ({
@@ -17,6 +26,8 @@ export const GameButton = ({
   className = "",
   icon,
   fullWidth = true,
+  loading = false,
+  disabled = false,
 }: GameButtonProps) => {
   const isAccent = variant === "accent";
 
@@ -25,31 +36,62 @@ export const GameButton = ({
     ? "border-accent-border"
     : "border-primary-border";
 
+  // Reanimated shared value — updates on UI thread, NO React re-render.
+  // This prevents the navigation context crash when Android fires
+  // touch events after returning from the wallet app's Activity.
+  const pressed = useSharedValue(0);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: pressed.value * 4 }],
+    borderBottomWidth: 6 - pressed.value * 4,
+  }));
+
+  const tap = Gesture.Tap()
+    .onBegin(() => {
+      "worklet";
+      pressed.value = withTiming(1, { duration: 50 });
+    })
+    .onFinalize(() => {
+      "worklet";
+      pressed.value = withTiming(0, { duration: 100 });
+    })
+    .onEnd(() => {
+      "worklet";
+      if (onPress && !disabled && !loading) {
+        runOnJS(onPress)();
+      }
+    })
+    .enabled(!disabled && !loading);
+
   return (
-    <Pressable
-      onPress={onPress}
-      className={`
-        ${fullWidth ? "w-full" : "self-start"} 
-        ${className}
-      `}
-    >
-      {({ pressed }) => (
-        <View
+    <GestureDetector gesture={tap}>
+      <Animated.View
+        className={`
+          ${fullWidth ? "w-full" : "self-start"} 
+          ${className}
+        `}
+      >
+        <Animated.View
           className={`
             flex-row items-center justify-center gap-3
             rounded-2xl px-6 py-4
             ${bgColorClass}
             ${borderColorClass}
-            ${pressed ? "border-b-[2px] translate-y-1" : "border-b-[6px]"}
+            ${disabled || loading ? "opacity-60" : ""}
           `}
+          style={animatedStyle}
         >
-          {icon && <View>{icon}</View>}
+          {loading ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            icon && <View>{icon}</View>
+          )}
           <Text className="text-white uppercase tracking-wider text-lg font-bold">
             {children}
           </Text>
-        </View>
-      )}
-    </Pressable>
+        </Animated.View>
+      </Animated.View>
+    </GestureDetector>
   );
 };
 

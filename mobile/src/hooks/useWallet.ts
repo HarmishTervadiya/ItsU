@@ -75,8 +75,7 @@ export const useWallet = () => {
       });
     } catch (error: any) {
       console.error("Connect wallet failed:", error.message);
-      Toast.error("Someting went wrong");
-      throw error;
+      Toast.error("Something went wrong");
     } finally {
       setConnecting(false);
     }
