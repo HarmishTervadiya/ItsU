@@ -6,7 +6,7 @@ import GameButton from "@/src/components/GameButton";
 import { Ghost, Wallet } from "lucide-react-native";
 import AppIcon from "@/src/assets/images/icons/eye-icon.png";
 import { useWallet } from "@/src/hooks/useWallet";
-import ToastManager from "toastify-react-native";
+import SetUsernameModal from "@/src/components/SetUsernameModal";
 
 export default function LoginScreen() {
   const { signInWithSolana, connecting } = useWallet();
@@ -75,10 +75,10 @@ export default function LoginScreen() {
       </View>
 
       <View className="absolute -bottom-10 -right-10 opacity-20 rotate-12 animate-pulse">
-        <Ghost size={200} color={"#6D28D9"} />
+        <Ghost size={180} color={"#6D28D9"} />
       </View>
-      <ToastManager />
+
+      <SetUsernameModal />
     </SafeAreaView>
   );
 }
-

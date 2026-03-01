@@ -132,10 +132,12 @@ export const login = asyncHandler(async (req, res) => {
         {
           accessToken,
           refreshToken,
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          walletAddress: user.walletAddress,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            walletAddress: user.walletAddress,
+          },
         },
         "User logged in successfully",
       ),

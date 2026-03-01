@@ -13,7 +13,6 @@ import { useEffect } from "react";
 import "react-native-reanimated";
 import "../global.css";
 import { useAuthStore } from "@/src/stores/authStore";
-import ToastManager from "toastify-react-native/components/ToastManager";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export {
@@ -66,8 +65,10 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === "auth";
 
     if (isAuthenticated && inAuthGroup) {
-      router.replace("/");
+      if (router.canDismiss()) router.dismissAll();
+      router.replace("/game");
     } else if (!isAuthenticated && !inAuthGroup) {
+      if (router.canDismiss()) router.dismissAll();
       router.replace("/auth/login");
     }
   }, [isAuthenticated, segments]);
@@ -79,10 +80,11 @@ function RootLayoutNav() {
           headerShown: false,
           contentStyle: { backgroundColor: "#161623" },
         }}
+
       >
         <Stack.Screen name="auth/login" options={{ headerShown: false }} />
         <Stack.Protected guard={isAuthenticated}>
-          <Stack.Screen name="index" />
+          <Stack.Screen name="game" />
           <Stack.Screen name="modal" options={{ presentation: "modal" }} />
         </Stack.Protected>
       </Stack>

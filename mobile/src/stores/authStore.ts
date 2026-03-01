@@ -20,6 +20,7 @@ interface AuthState {
   login: (walletAddress: string, signature: string) => Promise<boolean>;
   logout: () => void;
   setPublicKey: (publicKey: PublicKey | null) => void;
+  completeProfileSetup: (name: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -37,9 +38,10 @@ export const useAuthStore = create<AuthState>()(
         const accessToken = getItem("accessToken");
         const refreshToken = getItem("refreshToken");
         const storedPublicKey = getItem("publicKey");
+        const user = get().user;
 
         set({
-          isAuthenticated: Boolean(accessToken && refreshToken),
+          isAuthenticated: Boolean(accessToken && refreshToken && user?.name),
           isHydrated: true,
           publicKey: storedPublicKey ? new PublicKey(storedPublicKey) : null,
         });
@@ -65,7 +67,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           set({
-            isAuthenticated: true,
+            isAuthenticated: !!user.name,
             isLoading: false,
             user,
             accessToken: accessToken ?? null,
@@ -94,6 +96,12 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: null,
           publicKey: null,
         });
+      },
+      completeProfileSetup: (name: string) => {
+        set((state) => ({
+          user: state.user ? ({ ...state.user, name } as User) : null,
+          isAuthenticated: true,
+        }));
       },
       setPublicKey: (publicKey: PublicKey | null) => {
         set({ publicKey: publicKey });
