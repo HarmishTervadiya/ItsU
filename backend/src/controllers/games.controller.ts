@@ -12,6 +12,20 @@ import { startMatchMaker } from "../workers/matchmaker";
 import { gameManager } from "../state/gameStore";
 import { Role } from "@itsu/shared/generated/prisma/enums";
 import { v4 as uuidv4 } from "uuid";
+import type { GameState } from "@itsu/shared/src/types/game";
+
+const BOT_NAMES = [
+  "DEGEN",
+  "HODLR",
+  "WHALE",
+  "PEPE",
+  "CHAD",
+  "ALEX.SOL",
+  "VITALIK",
+  "Satoshi",
+  "MoonBoy",
+  "DiamondHands",
+];
 
 // Todo: Change this with env or db config
 const destination = "9uUYYvkEjEQTd7T5VgqEFkiWgFnTsRfiDqVEdwz5BEDS";
@@ -213,8 +227,15 @@ export const createPracticeGame = asyncHandler(async (req, res) => {
     randomItem!.hints[Math.floor(Math.random() * randomItem!.hints.length)];
   const gameId = `practice_${uuidv4()}`;
 
-  const inMemoryPlayers = [];
+  const inMemoryPlayers: GameState["players"] = [];
   const wolfIndex = Math.floor(Math.random() * 6);
+
+  // Load the real username for the human player, fall back if missing
+  const userRecord = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true },
+  });
+  const humanDisplayName = userRecord?.name || "You";
 
   for (let i = 0; i < 6; i++) {
     const assignedRole = i === wolfIndex ? Role.WOLF : Role.CITIZEN;
@@ -224,13 +245,20 @@ export const createPracticeGame = asyncHandler(async (req, res) => {
         role: assignedRole,
         isDead: false,
         isBot: false,
+        displayName: humanDisplayName,
       });
     } else {
+      const botId = `bot_${uuidv4()}`;
+      const nameIndex =
+        Math.abs(botId.charCodeAt(0) + i) % BOT_NAMES.length;
+      const displayName = BOT_NAMES[nameIndex] || "Bot";
+
       inMemoryPlayers.push({
-        playerId: `bot_${uuidv4()}`,
+        playerId: botId,
         role: assignedRole,
         isDead: false,
         isBot: true,
+        displayName,
       });
     }
   }

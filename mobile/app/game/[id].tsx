@@ -13,8 +13,6 @@ import { NightPhase } from '@/src/components/game/NightPhase';
 import { RevealPhase } from '@/src/components/game/RevealPhase';
 import { FinishedPhase } from '@/src/components/game/FinishedPhase';
 
-const BOT_NAMES = ["DEGEN", "HODLR", "WHALE", "PEPE", "CHAD", "ALEX.SOL", "VITALIK", "Satoshi", "MoonBoy", "DiamondHands"];
-
 export default function GameScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
@@ -31,37 +29,25 @@ export default function GameScreen() {
         };
     }, [id, user?.id]);
 
-    const randomNamesMap = React.useMemo(() => {
-        const map: Record<string, string> = {};
-        if (game) {
-            game.players.forEach((p, i) => {
-                if (p.isBot) {
-                    const nameIndex = (p.playerId.charCodeAt(0) + i) % BOT_NAMES.length;
-                    map[p.playerId] = BOT_NAMES[nameIndex];
-                }
-            });
-        }
-        return map;
-    }, [game?.players]);
-
     const players = React.useMemo(() => {
         if (!game) return [];
         const colors = ['#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#D946EF'];
         return game.players.map((p, idx) => ({
             id: p.playerId,
-            name: p.isBot ? randomNamesMap[p.playerId] : (p.playerId === user?.id ? user?.name || "ME" : `PLAYER_${idx + 1}`),
+            name: p.displayName || (p.playerId === user?.id ? user?.name || "ME" : `PLAYER_${idx + 1}`),
             color: colors[idx % colors.length],
             role: p.role,
             isAlive: !p.isDead,
             isMe: p.playerId === user?.id
         }));
-    }, [game, user?.id, user?.name, randomNamesMap]);
+    }, [game, user?.id, user?.name]);
 
     const myPlayer = players.find(p => p.isMe);
     const alivePlayers = players.filter(p => p.isAlive);
     const wolfPlayer = players.find(p => p.role === 'WOLF');
 
     const [isRevealing, setIsRevealing] = useState(true);
+    const [recentlyKilled, setRecentlyKilled] = useState<any>(null);
 
     useEffect(() => {
         if (game?.status === 'LOBBY' || (game?.status === 'CHAT_PHASE' && isRevealing)) {
@@ -86,19 +72,25 @@ export default function GameScreen() {
 
     const [timeLeft, setTimeLeft] = useState(0);
 
-    const aliveCountRef = React.useRef(alivePlayers.length);
+    const aliveCountRef = React.useRef(alivePlayers);
     const fullScreenFlashAnim = React.useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        // Trigger full screen flash if a player dies
-        if (alivePlayers.length < aliveCountRef.current && game?.status !== 'LOBBY' && game?.status !== 'FINISHED') {
-            Animated.sequence([
-                Animated.timing(fullScreenFlashAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
-                Animated.timing(fullScreenFlashAnim, { toValue: 0, duration: 800, useNativeDriver: true })
-            ]).start();
+        // Trigger full screen flash and overlay if a player dies
+        if (alivePlayers.length < aliveCountRef.current.length && game?.status !== 'LOBBY' && game?.status !== 'FINISHED') {
+            const previousAliveIds = new Set(aliveCountRef.current.map(p => p.id));
+            const deadPlayer = aliveCountRef.current.find(p => !alivePlayers.some(ap => ap.id === p.id));
+
+            if (deadPlayer) {
+                setRecentlyKilled(deadPlayer);
+                Animated.sequence([
+                    Animated.timing(fullScreenFlashAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+                    Animated.timing(fullScreenFlashAnim, { toValue: 0, duration: 2500, useNativeDriver: true })
+                ]).start(() => setRecentlyKilled(null));
+            }
         }
-        aliveCountRef.current = alivePlayers.length;
-    }, [alivePlayers.length, game?.status]);
+        aliveCountRef.current = alivePlayers;
+    }, [alivePlayers, game?.status]);
 
     useEffect(() => {
         if (!game?.phaseEndTime) return;
@@ -222,12 +214,26 @@ export default function GameScreen() {
                     </View>
                 )}
 
-                {/* Full Screen Kill Flash */}
+                {/* Full Screen Kill Flash & UI */}
                 <Animated.View
                     pointerEvents="none"
-                    className="absolute inset-0 z-[60] bg-red-600"
+                    className="absolute inset-0 z-[60] bg-red-800/90 items-center justify-center"
                     style={{ opacity: fullScreenFlashAnim }}
-                />
+                >
+                    {recentlyKilled && (
+                        <View className="items-center mt-[-60px]">
+                            <View className="w-24 h-24 rounded-full border-4 border-[#12121A] items-center justify-center shadow-lg" style={{ backgroundColor: recentlyKilled.color || '#450a0a' }}>
+                                <Skull size={48} color="#12121A" />
+                            </View>
+                            <Text className="text-white font-black text-3xl uppercase tracking-widest mt-6 drop-shadow-lg">
+                                {recentlyKilled.name}
+                            </Text>
+                            <Text className="text-red-300 font-bold text-lg mt-2 uppercase tracking-wide">
+                                Was Eliminated
+                            </Text>
+                        </View>
+                    )}
+                </Animated.View>
             </View>
         </SafeAreaView>
     );

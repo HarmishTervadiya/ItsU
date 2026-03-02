@@ -7,6 +7,19 @@ import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { logger } from "../utils/logger";
 import { v4 as uuidv4 } from "uuid";
 
+const BOT_NAMES = [
+  "DEGEN",
+  "HODLR",
+  "WHALE",
+  "PEPE",
+  "CHAD",
+  "ALEX.SOL",
+  "VITALIK",
+  "Satoshi",
+  "MoonBoy",
+  "DiamondHands",
+];
+
 const TICK_TIME = 5000;
 let isRunning = true;
 let matchMakerTimer: NodeJS.Timeout | null = null;
@@ -77,6 +90,13 @@ export async function matchMaker() {
         [];
       const inMemoryPlayers: GameState["players"] = [];
 
+      // Preload user names so we can attach real display names
+      const users = await tx.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, name: true },
+      });
+      const userNameMap = new Map(users.map((u) => [u.id, u.name]));
+
       for (let i = 0; i < 6; i++) {
         const assignedRole = i === wolfIndex ? Role.WOLF : Role.CITIZEN;
 
@@ -87,19 +107,30 @@ export async function matchMaker() {
             userId,
             role: assignedRole,
           });
+
+          const realName = userNameMap.get(userId) || null;
+          const fallbackName = `PLAYER_${i + 1}`;
+
           inMemoryPlayers.push({
             playerId: userId,
             role: assignedRole,
             isDead: false,
             isBot: false,
+            displayName: realName || fallbackName,
           });
         } else {
-          // It's a Bot -> Add to Memory ONLY
+          // It's a Bot -> Add to Memory ONLY with a random but stable display name
+          const botId = `bot_${uuidv4()}`;
+          const nameIndex =
+            Math.abs(botId.charCodeAt(0) + i) % BOT_NAMES.length;
+          const displayName = BOT_NAMES[nameIndex] || "Bot";
+
           inMemoryPlayers.push({
-            playerId: `bot_${uuidv4()}`,
+            playerId: botId,
             role: assignedRole,
             isDead: false,
             isBot: true,
+            displayName,
           });
         }
       }
@@ -110,7 +141,7 @@ export async function matchMaker() {
 
       return { newGame, inMemoryPlayers };
     });
-    -gameManager.createGame(result.newGame.id, {
+    gameManager.createGame(result.newGame.id, {
       id: result.newGame.id,
       status: "LOBBY",
       currency: "SOL",

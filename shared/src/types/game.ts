@@ -15,6 +15,7 @@ export interface GameState {
     role: "WOLF" | "CITIZEN";
     isDead: boolean;
     isBot: boolean;
+    displayName: string;
   }[];
   item: string;
   hint: string;
