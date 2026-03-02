@@ -7,9 +7,11 @@ interface GameStoreState {
   game: GameState | null;
   socket: Socket | null;
   isConnected: boolean;
+  error: string | null;
 
   connectToGame: (gameId: string, userId: string) => void;
   disconnect: () => void;
+  clearError: () => void;
   sendChat: (gameId: string, message: string) => void;
   submitVote: (gameId: string, targetId: string) => void;
   executeKill: (gameId: string, targetId: string) => void;
@@ -19,6 +21,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   game: null,
   socket: null,
   isConnected: false,
+  error: null,
+
+  clearError: () => set({ error: null }),
 
   connectToGame: (gameId: string, userId: string) => {
     // Disconnect existing socket if any
@@ -29,7 +34,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     // Initialize socket connection using the config's SERVER_URL
     const socket = io(config.SERVER_URL, {
       transports: ["websocket"],
-      reconnectionAttempts: 5,
+      // Allow infinite reconnects for mobile app backgrounding
+      reconnectionAttempts: Infinity,
     });
 
     socket.on("connect", () => {
@@ -51,7 +57,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       set({ isConnected: false });
     });
 
-    set({ socket });
+    socket.on("gameNotFound", () => {
+      set({ error: "Game session lost or finished.", isConnected: false });
+    });
+
+    set({ socket, error: null });
   },
 
   disconnect: () => {

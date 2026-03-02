@@ -20,7 +20,7 @@ export default function GameScreen() {
     const { id } = useLocalSearchParams();
 
     const { user } = useAuthStore();
-    const { game, connectToGame, disconnect, isConnected } = useGameStore();
+    const { game, connectToGame, disconnect, isConnected, error, clearError } = useGameStore();
 
     useEffect(() => {
         if (id && user?.id) {
@@ -59,6 +59,7 @@ export default function GameScreen() {
 
     const myPlayer = players.find(p => p.isMe);
     const alivePlayers = players.filter(p => p.isAlive);
+    const wolfPlayer = players.find(p => p.role === 'WOLF');
 
     const [isRevealing, setIsRevealing] = useState(true);
 
@@ -115,7 +116,20 @@ export default function GameScreen() {
     if (!game) {
         return (
             <SafeAreaView className="flex-1 bg-background items-center justify-center">
-                <Text className="text-white font-bold text-lg">Connecting to Game...</Text>
+                <Text className="text-white font-bold text-lg">
+                    {error ? error : "Connecting to Game..."}
+                </Text>
+                {error && (
+                    <TouchableOpacity
+                        onPress={() => {
+                            clearError();
+                            router.replace('/game');
+                        }}
+                        className="mt-6 bg-primary border-4 border-[#12121A] rounded-2xl px-8 py-3 shadow-[4px_4px_0_0_black]"
+                    >
+                        <Text className="text-white font-black uppercase text-sm">Back to Lobby</Text>
+                    </TouchableOpacity>
+                )}
             </SafeAreaView>
         );
     }
@@ -193,7 +207,7 @@ export default function GameScreen() {
                     {phase === 'CHAT' && <ChatPhase players={players} />}
                     {phase === 'NIGHT' && <NightPhase alivePlayers={alivePlayers} myPlayer={myPlayer} />}
                     {phase === 'VOTE' && <VotePhase alivePlayers={alivePlayers} players={players} />}
-                    {phase === 'FINISHED' && <FinishedPhase onLeaveGame={onLeaveGame} winnerRole={game.winnerRole} />}
+                    {phase === 'FINISHED' && <FinishedPhase onLeaveGame={onLeaveGame} winnerRole={game.winnerRole} wolfName={wolfPlayer?.name} />}
                 </View>
 
                 {/* Dead Player Spectator Overlay */}

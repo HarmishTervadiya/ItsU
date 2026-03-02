@@ -20,7 +20,7 @@ export const useWallet = () => {
   const publicKey = useAuthStore((s) => s.publicKey);
   const setPublicKey = useAuthStore((s) => s.setPublicKey);
   const [connecting, setConnecting] = useState<boolean>(false);
-  const cluster = "devnet";
+  const cluster = "mainnet-beta";
   const login = useAuthStore((s) => s.login);
 
   const signInWithSolana = async () => {

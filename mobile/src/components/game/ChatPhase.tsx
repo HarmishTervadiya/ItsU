@@ -35,7 +35,7 @@ export const ChatPhase: React.FC<ChatPhaseProps> = ({ players }) => {
                 <View className="bg-panel border-4 border-[#12121A] rounded-3xl p-3 pt-5">
                     {/* Messages */}
                     <ScrollView
-                        className="h-40 mb-2"
+                        className="h-44 mb-2"
                         ref={scrollViewRef}
                         onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
                         showsVerticalScrollIndicator={false}

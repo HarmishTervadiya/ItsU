@@ -243,7 +243,7 @@ export const createPracticeGame = asyncHandler(async (req, res) => {
     status: "LOBBY",
     currency: "SOL",
     potAmount: 0n,
-    phaseEndTime: Date.now() + 30000,
+    phaseEndTime: Date.now() + 5000,
     players: inMemoryPlayers,
     item: randomItem!.name,
     hint: randomHint!,

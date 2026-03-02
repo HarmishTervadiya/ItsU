@@ -229,6 +229,21 @@ class GameManager {
       return true;
     }
 
+    if (game.isPractice) {
+      const humanPlayers = game.players.filter((p) => !p.isBot);
+      const humansAlive = humanPlayers.some((p) => !p.isDead);
+
+      if (!humansAlive) {
+        logger.info(
+          `Practice Game ${gameId} ended early: All human players are dead.`,
+        );
+        game.status = "FINISHED";
+        game.winnerRole = "WOLF"; // Default WOLF win if humans die in practice mode
+        this.handlePayouts(gameId, Role.WOLF);
+        return true;
+      }
+    }
+
     return false;
   }
 

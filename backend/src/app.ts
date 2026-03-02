@@ -55,6 +55,8 @@ io.on("connection", async (socket) => {
         potAmount: currentState.potAmount.toString(),
       };
       socket.emit("gameStateUpdated", serializedState);
+    } else {
+      socket.emit("gameNotFound");
     }
   });
 

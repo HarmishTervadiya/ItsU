@@ -5,9 +5,10 @@ import { Trophy } from 'lucide-react-native';
 interface FinishedPhaseProps {
     onLeaveGame: () => void;
     winnerRole?: "WOLF" | "CITIZEN";
+    wolfName?: string;
 }
 
-export const FinishedPhase: React.FC<FinishedPhaseProps> = ({ onLeaveGame, winnerRole }) => {
+export const FinishedPhase: React.FC<FinishedPhaseProps> = ({ onLeaveGame, winnerRole, wolfName }) => {
     return (
         <View className="absolute inset-0 z-50 bg-[#0a0a10]/95 flex-col items-center justify-center" pointerEvents="box-none">
             <View className="w-24 h-24 bg-yellow-500/20 rounded-full items-center justify-center mb-6 border-2 border-yellow-500/30">
@@ -21,6 +22,12 @@ export const FinishedPhase: React.FC<FinishedPhaseProps> = ({ onLeaveGame, winne
             {winnerRole && (
                 <Text className={`text-xl font-black uppercase tracking-widest text-center mb-2 ${winnerRole === 'WOLF' ? 'text-red-500' : 'text-primary'}`}>
                     {winnerRole}S WIN
+                </Text>
+            )}
+
+            {wolfName && (
+                <Text className="text-lg font-bold text-red-400 text-center mb-4">
+                    The Wolf was: {wolfName}
                 </Text>
             )}
 
