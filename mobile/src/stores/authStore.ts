@@ -1,4 +1,4 @@
-import { User } from "@itsu/shared/types/user";
+import { User } from "~/shared/types/user";
 import { create } from "zustand";
 import { loginApi } from "../api/auth";
 import { getCalendars } from "expo-localization";

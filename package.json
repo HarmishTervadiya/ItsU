@@ -7,7 +7,6 @@
     "bun": ">=1.0.0"
   },
   "workspaces": [
-    "mobile",
     "backend",
     "anchor",
     "shared"

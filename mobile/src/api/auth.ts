@@ -1,4 +1,4 @@
-import { User } from "@itsu/shared/types/user";
+import { User } from "~/shared/types/user";
 import { apiClient } from "../utils/apiHandler";
 import { withApiErrorHandler } from "../utils/apiWrapper";
 

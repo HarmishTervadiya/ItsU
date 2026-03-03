@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { GameState } from "@itsu/shared/types/game";
+import { GameState } from "~/shared/types/game";
 import { Socket, io } from "socket.io-client";
 import { config } from "../config";
 
