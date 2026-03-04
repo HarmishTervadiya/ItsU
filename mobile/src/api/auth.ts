@@ -16,7 +16,11 @@ export interface LoginResponse {
 
 export const loginApi = (data: LoginPayload) => {
   return withApiErrorHandler(() =>
-    apiClient.post<LoginResponse>("/auth/login", data),
+    apiClient.post<LoginResponse>("/auth/login", data, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }),
   );
 };
 

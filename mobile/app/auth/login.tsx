@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import StarField from "@/src/components/StarField";
@@ -7,6 +7,7 @@ import { Ghost, Wallet } from "lucide-react-native";
 import AppIcon from "@/src/assets/images/icons/eye-icon.png";
 import { useWallet } from "@/src/hooks/useWallet";
 import SetUsernameModal from "@/src/components/SetUsernameModal";
+import { apiClient } from "@/src/utils/apiHandler";
 
 export default function LoginScreen() {
   const { signInWithSolana, connecting } = useWallet();

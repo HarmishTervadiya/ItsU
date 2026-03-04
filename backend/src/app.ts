@@ -90,6 +90,9 @@ app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/games", gamesRouter);
 app.use("/api/transactions", transactionsRouter);
+app.get("/api/healthcheck", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   const statusCode = err.statusCode || 500;

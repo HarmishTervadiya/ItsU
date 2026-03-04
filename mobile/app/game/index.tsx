@@ -81,7 +81,7 @@ export default function GameHomeScreen() {
 
                             {/* Center Content */}
                             <View className="items-center z-10">
-                                <Text className="text-4xl font-black text-white italic uppercase tracking-tighter" style={{ textShadowColor: 'rgba(0, 0, 0, 0.3)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2, transform: [{ rotate: "-1deg" }] }}>
+                                <Text className="w-full text-center text-4xl font-black text-white italic uppercase tracking-tighter" style={{ textShadowColor: 'rgba(0, 0, 0, 0.3)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2, transform: [{ rotate: "-1deg" }] }}>
                                     Start Game
                                 </Text>
                                 <View className="px-3 py-1 rounded-lg mb-4 mt-1 bg-primary-dark/40">

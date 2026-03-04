@@ -77,6 +77,9 @@ api.interceptors.request.use(
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
+    if (config.data && !config.headers["Content-Type"]) {
+      config.headers["Content-Type"] = "application/json";
+    }
     return config;
   },
   function (error: AxiosError) {
