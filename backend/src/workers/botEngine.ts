@@ -3,6 +3,7 @@ import { config } from "../config";
 import type { GameState } from "@itsu/shared/src/types/game";
 import { logger } from "../utils/logger";
 import { gameManager } from "../state/gameStore";
+import { chatCompletionGemini } from "../utils/gemini";
 
 const groq = new Groq({ apiKey: config.GROQ_API_KEY });
 
@@ -25,8 +26,32 @@ function getPlayerName(playerId: string, state: GameState): string {
 }
 
 export class BotEngine {
+  private static botClients = new Map<string, "groq" | "gemini">();
+
   public static tick(gameId: string, state: GameState) {
-    const aliveBots = state.players.filter((p) => p.isBot && !p.isDead);
+    if (state.status === "FINISHED" || state.status === "FAILED") {
+      for (const [key] of this.botClients) {
+        if (key.startsWith(`${gameId}_`)) {
+          this.botClients.delete(key);
+        }
+      }
+      return;
+    }
+
+    const inGameBots = state.players.filter((p) => p.isBot);
+
+    // cleanup dead bots and assign new bots
+    for (const bot of inGameBots) {
+      const key = `${gameId}_${bot.playerId}`;
+      if (bot.isDead) {
+        this.botClients.delete(key);
+      } else if (state.status === "LOBBY" && !this.botClients.has(key)) {
+        const botIndex = inGameBots.indexOf(bot);
+        this.botClients.set(key, botIndex === 1 || botIndex === 4 ? "gemini" : "groq");
+      }
+    }
+
+    const aliveBots = inGameBots.filter((p) => !p.isDead);
     if (aliveBots.length === 0) return;
 
     for (const bot of aliveBots) {
@@ -84,10 +109,9 @@ export class BotEngine {
             2. NEVER mention any UUIDs, Player IDs (like "e64f057c-..." or anything similar) or your own Name. Only use pronouns (him/her/them) or say "that guy". If you see a UUID in the chat history, ignore it entirely.
             3. DO NOT be deep, poetic, or analytical. Write like a dumb gen-z crypto degen typing on a phone.
             4. Keep it UNDER 8 words. Extremely short.
-            5. If you are CITIZEN, the secret item in play is: "${state.item}". Make a VAGUE, subtle statement hinting you know about it.
-            6. If you are WOLF, the hint about the item is: "${state.hint}". Blend in.
-            7. LANGUAGE RULE: Support two languages: English and whatever language the chat is going on in. The first chat from bot must be in english If all chats are in English, continue with English. If the chat has some new language, proceed with it, but English is compulsory as a fallback. Before replying, carefully check the language they are speaking—it could be that they are using English letters/text but writing in their native language, Respond naturally to that.
-            8. CONTEXT RULE: Read the chat carefully. Your response must directly address, agree with, or argue against the VERY LAST message in the chat log. Do not make generic standalone statements. Defend yourself immediately if accused.
+            ${bot.role === "WOLF" ? '5. If you are CITIZEN, the secret item in play is: "${state.item}". Make a VAGUE, subtle statement hinting you know about it.' : '5. If you are WOLF, the hint about the item is: "${state.hint}". Blend in.'}
+            6. LANGUAGE RULE: Support two languages: English and whatever language the chat is going on in. The first chat from bot must be in english If all chats are in English, continue with English. If the chat has some new language, proceed with it, but English is compulsory as a fallback. Before replying, carefully check the language they are speaking—it could be that they are using English letters/text but writing in their native language, Respond naturally to that.
+            7. CONTEXT RULE: Read the chat carefully. Your response must directly address, agree with, or argue against the VERY LAST message in the chat log. Do not make generic standalone statements. Defend yourself immediately if accused.
             
             Recent chat: 
             ${chatHistory || "No messages yet."}
@@ -95,19 +119,31 @@ export class BotEngine {
             You MUST reply ONLY with a valid JSON object containing your next short chat message.
             Example: {"message": "your short message here"}`;
 
-      const chatCompletion = await groq.chat.completions.create({
-        messages: [{ role: "user", content: prompt }],
-        model: "moonshotai/kimi-k2-instruct",
-        response_format: { type: "json_object" },
-        max_completion_tokens: 50,
-      });
+      const client = this.botClients.get(`${gameId}_${bot.playerId}`) || "groq";
+      let replyStr: string | null = null;
+      if (client === "gemini") {
+        replyStr = await chatCompletionGemini(prompt, gameId, bot.playerId);
+      } else {
+        // Use Groq for chat
+        const chatCompletion = await groq.chat.completions.create({
+          messages: [{ role: "user", content: prompt }],
+          model: "llama-3.1-8b-instant",
+          response_format: { type: "json_object" },
+          max_completion_tokens: 100,
+        });
+        replyStr = chatCompletion.choices[0]?.message.content?.trim() || null;
+      }
 
       logger.debug({ gameId }, "[Bot Chat] generation successful!");
-
-      const replyStr = chatCompletion.choices[0]?.message.content?.trim();
       if (replyStr) {
         try {
-          const parsed = JSON.parse(replyStr);
+          let parsed: any = {};
+          try {
+            parsed = JSON.parse(replyStr);
+          } catch (e) {
+            // Fallback: treat as plain text
+            parsed = { message: replyStr.trim() };
+          }
           if (parsed.message) {
             logger.debug({ gameId }, "[Bot Chat] Chat added");
             gameManager.addChat(
@@ -119,7 +155,7 @@ export class BotEngine {
         } catch (e) {
           logger.error(
             { gameId, error: e },
-            `[Bot Chat] Failed to parse JSON reply`,
+            `[Bot Chat] Failed to parse reply`,
           );
         }
       }
@@ -226,7 +262,7 @@ export class BotEngine {
 
       const chatCompletion = await groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        model: "moonshotai/kimi-k2-instruct",
+        model: "llama-3.1-8b-instant",
         response_format: { type: "json_object" },
         max_completion_tokens: 50,
       });
