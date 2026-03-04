@@ -58,12 +58,14 @@ export default function GameScreen() {
         }
     }, [game?.status]);
 
-    const phase = isRevealing ? 'REVEAL'
-        : game?.status === 'CHAT_PHASE' ? 'CHAT'
-            : game?.status === 'NIGHT_PHASE' ? 'NIGHT'
-                : game?.status === 'VOTE_PHASE' ? 'VOTE'
-                    : game?.status === 'FINISHED' ? 'FINISHED'
-                        : 'REVEAL';
+    const phaseMap: Record<string, string> = {
+        'CHAT_PHASE': 'CHAT',
+        'NIGHT_PHASE': 'NIGHT',
+        'VOTE_PHASE': 'VOTE',
+        'FINISHED': 'FINISHED',
+    };
+
+    const phase = isRevealing ? 'REVEAL' : (phaseMap[game?.status as string] || 'REVEAL');
 
     const onLeaveGame = () => {
         disconnect();
@@ -108,7 +110,7 @@ export default function GameScreen() {
     if (!game) {
         return (
             <SafeAreaView className="flex-1 bg-background items-center justify-center">
-                <Text className="text-white font-bold text-lg">
+                <Text className="w-full text-center text-white font-bold text-lg">
                     {error ? error : "Connecting to Game..."}
                 </Text>
                 {error && (
@@ -117,20 +119,24 @@ export default function GameScreen() {
                             clearError();
                             router.replace('/game');
                         }}
-                        className="mt-6 bg-primary border-4 border-[#12121A] rounded-2xl px-8 py-3 shadow-[4px_4px_0_0_black]"
+                        className="w-56 mt-6 bg-primary border-4 border-[#12121A] rounded-2xl px-8 py-3 shadow-[4px_4px_0_0_black]"
                     >
-                        <Text className="text-white font-black uppercase text-sm">Back to Lobby</Text>
+                        <Text className="w-full text-center text-white font-black uppercase text-sm">Back to Lobby</Text>
                     </TouchableOpacity>
                 )}
             </SafeAreaView>
         );
     }
 
-    const phaseLabel = phase === 'CHAT' ? '💬 DISCUSSION'
-        : phase === 'VOTE' ? '🗳️ VOTING'
-            : phase === 'NIGHT' ? '🌙 NIGHT'
-                : phase === 'REVEAL' ? '👁️ REVEAL'
-                    : phase === 'FINISHED' ? '🏆 FINISHED' : '';
+    const phaseLabelMap: Record<string, string> = {
+        'CHAT': '💬 DISCUSSION',
+        'VOTE': '🗳️ VOTING',
+        'NIGHT': '🌙 NIGHT',
+        'REVEAL': '👁️ REVEAL',
+        'FINISHED': '🏆 FINISHED',
+    };
+
+    const phaseLabel = phaseLabelMap[phase] || '';
 
     return (
         <SafeAreaView className="flex-1 bg-background">
@@ -144,7 +150,7 @@ export default function GameScreen() {
 
                 {/* Header HUD */}
                 <View className="absolute top-0 left-0 right-0 z-30 px-4 pt-4 pb-2">
-                    <View className="flex-row justify-between items-start">
+                    <View className="w-full flex-row justify-between items-center">
                         {/* Left: Leave + Timer */}
                         <View className="flex-col gap-2">
                             <TouchableOpacity
@@ -156,25 +162,25 @@ export default function GameScreen() {
                             </TouchableOpacity>
                             {(phase !== 'FINISHED' && phase !== 'REVEAL' && timeLeft > 0) && (
                                 <View className="bg-[#12121A] border-2 border-primary/50 px-3 py-1.5 rounded-xl self-start">
-                                    <Text className="text-primary font-bold font-mono text-sm">{timeLeft}s</Text>
+                                    <Text className="w-full text-center text-primary font-bold font-mono text-sm">{timeLeft}s</Text>
                                 </View>
                             )}
                         </View>
 
                         {/* Center: Phase label */}
                         <View className="bg-[#12121A]/90 border-2 border-primary/30 px-4 py-2 rounded-2xl">
-                            <Text className="text-white font-black text-xs uppercase tracking-widest">{phaseLabel}</Text>
+                            <Text className="w-full text-center text-white font-black text-xs uppercase tracking-widest">{phaseLabel}</Text>
                         </View>
 
                         {/* Right: Alive count + Connection */}
                         <View className="flex-col items-end gap-2">
                             <View className="bg-panel border-4 border-[#12121A] px-4 py-2 rounded-2xl flex-row items-center gap-2 shadow-[2px_2px_0_0_black]">
                                 <View className="w-2 h-2 rounded-full bg-green-400" />
-                                <Text className="font-black text-white text-sm">{alivePlayers.length}/{players.length}</Text>
+                                <Text className="text-center font-black text-white text-sm">{alivePlayers.length}/{players.length}</Text>
                             </View>
                             {!isConnected && (
                                 <View className="bg-red-500/80 px-2 py-1 rounded-md">
-                                    <Text className="text-white text-[10px] font-bold">Disconnected</Text>
+                                    <Text className="w-full text-center text-white text-[10px] font-bold">Disconnected</Text>
                                 </View>
                             )}
                         </View>
@@ -204,10 +210,10 @@ export default function GameScreen() {
 
                 {/* Dead Player Spectator Overlay */}
                 {myPlayer && !myPlayer.isAlive && phase !== 'FINISHED' && (
-                    <View className="absolute inset-x-0 bottom-0 h-[60%] bg-black/85 z-50 items-center justify-center p-8 rounded-t-[32px] border-t-4 border-red-900/60">
+                    <View className="absolute inset-x-0 top-0 h-[60%] bg-black/85 z-50 items-center justify-center p-8 rounded-t-[32px] border-t-4 border-red-900/60">
                         <Skull size={56} color="#fca5a5" />
-                        <Text className="text-3xl font-black text-red-500 uppercase tracking-widest text-center mt-4 mb-2">You Died</Text>
-                        <Text className="text-slate-400 font-bold text-center leading-5 text-sm">You are now a spectator.{'\n'}Watch the crew fight for survival.</Text>
+                        <Text className="w-full text-center text-3xl font-black text-red-500 uppercase tracking-widest mt-4 mb-2">You Died</Text>
+                        <Text className="w-full text-center text-slate-400 font-bold leading-5 text-sm">You are now a spectator.{'\n'}Watch the crew fight for survival.</Text>
                         <TouchableOpacity onPress={onLeaveGame} className="mt-6 bg-panel border-2 border-red-900/50 rounded-xl px-6 py-3">
                             <Text className="text-white font-black text-sm uppercase">Leave Game</Text>
                         </TouchableOpacity>
@@ -225,10 +231,10 @@ export default function GameScreen() {
                             <View className="w-24 h-24 rounded-full border-4 border-[#12121A] items-center justify-center shadow-lg" style={{ backgroundColor: recentlyKilled.color || '#450a0a' }}>
                                 <Skull size={48} color="#12121A" />
                             </View>
-                            <Text className="text-white font-black text-3xl uppercase tracking-widest mt-6 drop-shadow-lg">
+                            <Text className="w-full text-center text-white font-black text-3xl uppercase tracking-widest mt-6 drop-shadow-lg">
                                 {recentlyKilled.name}
                             </Text>
-                            <Text className="text-red-300 font-bold text-lg mt-2 uppercase tracking-wide">
+                            <Text className="w-full text-center text-red-300 font-bold text-lg mt-2 uppercase tracking-wide">
                                 Was Eliminated
                             </Text>
                         </View>

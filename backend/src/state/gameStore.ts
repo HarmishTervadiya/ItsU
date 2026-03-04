@@ -13,6 +13,7 @@ const PHASE_DURATIONS = {
 
 class GameManager {
   private activeGames: Map<string, GameState> = new Map();
+  private disconnectTimers: Map<string, NodeJS.Timeout> = new Map();
 
   public onStateChange?: (gameId: string, state: GameState) => void;
 
@@ -69,6 +70,56 @@ class GameManager {
     return game.players.find((p) => p.playerId === playerId && !p.isDead);
   }
 
+  public handlePlayerDisconnect(gameId: string, userId: string) {
+    const timerKey = `${gameId}_${userId}`;
+    const timer = setTimeout(() => {
+      this.executeDisconnectKill(gameId, userId);
+      this.disconnectTimers.delete(timerKey);
+    }, 10000); // 10 seconds
+    this.disconnectTimers.set(timerKey, timer);
+  }
+
+  public handlePlayerReconnect(gameId: string, userId: string) {
+    const timerKey = `${gameId}_${userId}`;
+    if (this.disconnectTimers.has(timerKey)) {
+      clearTimeout(this.disconnectTimers.get(timerKey)!);
+      this.disconnectTimers.delete(timerKey);
+      logger.debug(
+        `[Game ${gameId}] Player ${userId} reconnected, penalty cancelled.`,
+      );
+    }
+  }
+
+  private executeDisconnectKill(gameId: string, userId: string) {
+    const game = this.activeGames.get(gameId);
+    if (!game) return;
+
+    if (game.status === "FINISHED" || game.status === "FAILED") return;
+
+    const player = this.getAlivePlayer(game, userId);
+    if (player) {
+      player.isDead = true;
+      game.lastActivity = Date.now();
+      logger.info(
+        `[Game ${gameId}] Player ${userId} killed due to 10s disconnection penalty.`,
+      );
+
+      if (!game.isPractice && !player.isBot) {
+        prisma.gamePlayer
+          .update({
+            where: { gameId_userId: { gameId, userId } },
+            data: { isDead: true, roundsSurvived: game.totalRounds },
+          })
+          .catch((e) =>
+            logger.error({ gameId }, "DB update failed for disconnect kill", e),
+          );
+      }
+
+      this.isGameFinished(gameId);
+      this.broadcast(gameId, game);
+    }
+  }
+
   private broadcast(gameId: string, game: GameState) {
     if (this.onStateChange) {
       this.onStateChange(gameId, game);
@@ -113,7 +164,7 @@ class GameManager {
       target.isDead = true;
       game.lastActivity = Date.now();
 
-      if (!game.isPractice) {
+      if (!game.isPractice && !target.isBot) {
         prisma.gamePlayer
           .update({
             where: { gameId_userId: { gameId, userId: targetId } },
@@ -186,7 +237,7 @@ class GameManager {
       if (target) {
         target.isDead = true;
 
-        if (!game.isPractice) {
+        if (!game.isPractice && !target.isBot) {
           prisma.gamePlayer
             .update({
               where: { gameId_userId: { gameId, userId: highestVotedId } },

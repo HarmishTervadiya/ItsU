@@ -145,6 +145,90 @@ export const pushToGameQueue = asyncHandler(async (req, res) => {
     .json(new ApiSuccess(newQueueEntry, "Successfully pushed to queue"));
 });
 
+// ──────────────────────────────────────────────────────────
+// TEMPORARY TEST ENDPOINT — bypasses transaction verification
+// TODO: Disable / remove this once real staking is required
+// ──────────────────────────────────────────────────────────
+export const pushToGameQueueTest = asyncHandler(async (req, res) => {
+  console.log("Hello");
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new ApiError(401, "UNAUTHORIZED", "User not found");
+  }
+
+  logger.debug(
+    { userId },
+    "[Join Queue TEST] Pushing user to queue without transaction verification",
+  );
+
+  // If already in queue, just return success and re-trigger matchmaker
+  const existing = await prisma.queueEntry.findUnique({
+    where: { userId },
+  });
+  if (existing) {
+    startMatchMaker();
+    return res
+      .status(200)
+      .json(new ApiSuccess(existing, "Already in queue — resuming search"));
+  }
+
+  const newQueueEntry = await prisma.queueEntry.create({
+    data: {
+      userId,
+      currency: "SOL", // placeholder
+      intent: "PENDING",
+    },
+  });
+
+  logger.debug(
+    { newQueueEntry },
+    "[Join Queue TEST] Successfully created new queue entry",
+  );
+
+  startMatchMaker();
+  return res
+    .status(201)
+    .json(new ApiSuccess(newQueueEntry, "Successfully pushed to queue (test)"));
+});
+
+import { MatchStatus } from "@itsu/shared/generated/prisma/enums";
+
+export const getActiveGame = asyncHandler(async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new ApiError(401, "UNAUTHORIZED", "User not found");
+  }
+
+  const activeGamePlayer = await prisma.gamePlayer.findFirst({
+    where: {
+      userId,
+      game: {
+        status: {
+          in: [MatchStatus.ONGOING],
+        },
+      },
+    },
+    select: {
+      gameId: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  if (!activeGamePlayer) {
+    return res
+      .status(200)
+      .json(new ApiSuccess({ gameId: null }, "No active game"));
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiSuccess({ gameId: activeGamePlayer.gameId }, "Active game found"),
+    );
+});
+
 export const getUserGameHistory = asyncHandler(async (req, res) => {
   const userId = req.user?.id;
 
@@ -249,8 +333,7 @@ export const createPracticeGame = asyncHandler(async (req, res) => {
       });
     } else {
       const botId = `bot_${uuidv4()}`;
-      const nameIndex =
-        Math.abs(botId.charCodeAt(0) + i) % BOT_NAMES.length;
+      const nameIndex = Math.abs(botId.charCodeAt(0) + i) % BOT_NAMES.length;
       const displayName = BOT_NAMES[nameIndex] || "Bot";
 
       inMemoryPlayers.push({

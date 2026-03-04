@@ -12,6 +12,12 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
+import { configureReanimatedLogger, ReanimatedLogLevel } from "react-native-reanimated";
+
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false,
+});
 import "../global.css";
 import { useAuthStore } from "@/src/stores/authStore";
 import { GestureHandlerRootView } from "react-native-gesture-handler";

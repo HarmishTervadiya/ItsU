@@ -6,9 +6,11 @@ import { config } from "../config";
 interface GameStoreState {
   game: GameState | null;
   socket: Socket | null;
+  lobbySocket: Socket | null;
   isConnected: boolean;
   error: string | null;
 
+  connectToLobby: (userId: string) => void;
   connectToGame: (gameId: string, userId: string) => void;
   disconnect: () => void;
   clearError: () => void;
@@ -20,10 +22,29 @@ interface GameStoreState {
 export const useGameStore = create<GameStoreState>((set, get) => ({
   game: null,
   socket: null,
+  lobbySocket: null,
   isConnected: false,
   error: null,
 
   clearError: () => set({ error: null }),
+
+  connectToLobby: (userId: string) => {
+    if (get().lobbySocket) return; // Already connected
+
+    const lobbySocket = io(config.SERVER_URL, {
+      transports: ["websocket"],
+      reconnectionAttempts: Infinity,
+    });
+
+    lobbySocket.on("connect", () => {
+      lobbySocket.emit("joinLobby", { userId });
+      set({ lobbySocket });
+    });
+
+    lobbySocket.on("disconnect", () => {
+      set({ lobbySocket: null });
+    });
+  },
 
   connectToGame: (gameId: string, userId: string) => {
     // Disconnect existing socket if any
@@ -65,11 +86,14 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   },
 
   disconnect: () => {
-    const { socket } = get();
+    const { socket, lobbySocket } = get();
     if (socket) {
       socket.disconnect();
-      set({ socket: null, isConnected: false, game: null });
     }
+    if (lobbySocket) {
+      lobbySocket.disconnect();
+    }
+    set({ socket: null, lobbySocket: null, isConnected: false, game: null });
   },
 
   sendChat: (gameId: string, message: string) => {

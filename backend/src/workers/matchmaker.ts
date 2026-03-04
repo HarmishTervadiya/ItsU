@@ -24,6 +24,16 @@ const TICK_TIME = 5000;
 let isRunning = true;
 let matchMakerTimer: NodeJS.Timeout | null = null;
 
+// Fisher-Yates shuffle to randomize queue selection
+function shuffleArray<T>(arr: T[]): T[] {
+  const shuffled = [...arr];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i]!, shuffled[j]!] = [shuffled[j]!, shuffled[i]!];
+  }
+  return shuffled;
+}
+
 export async function matchMaker() {
   if (!isRunning) return;
 
@@ -38,20 +48,27 @@ export async function matchMaker() {
     let botCount = 0;
 
     if (solEntries.length >= 6) {
-      logger.debug("[Match Making] 6 players found");
-      selectedEntries = solEntries.slice(0, 6);
+      logger.debug("[Match Making] 6+ players found, picking 6 randomly");
+      // Shuffle to avoid friends who joined together always matching
+      const shuffled = shuffleArray(solEntries);
+      selectedEntries = shuffled.slice(0, 6);
       botCount = 0;
     } else if (solEntries.length > 0) {
+      // Still check the oldest entry for the 60s timeout (entries are ordered by joinedAt asc)
       const timeElapsed = Date.now() - solEntries[0]!.joinedAt.getTime();
       if (timeElapsed > 60000) {
-        logger.debug("[Match Making] Adding bot players found");
-        selectedEntries = solEntries;
+        logger.debug("[Match Making] Timeout reached, adding bot players");
+        selectedEntries = shuffleArray(solEntries);
         botCount = 6 - selectedEntries.length;
       }
     }
 
     if (selectedEntries.length === 0) {
-      stopMatchMaker();
+      if (solEntries.length === 0) {
+        // Queue is empty — stop the matchmaker
+        stopMatchMaker();
+      }
+      // Entries exist but < 6 and timeout not reached yet — let the next tick retry
       return;
     }
     logger.debug("[Match Making] Entries found");
@@ -119,7 +136,7 @@ export async function matchMaker() {
             displayName: realName || fallbackName,
           });
         } else {
-          // It's a Bot -> Add to Memory ONLY with a random but stable display name
+          // Bot: Add to Memory ONLY with a random but stable display name
           const botId = `bot_${uuidv4()}`;
           const nameIndex =
             Math.abs(botId.charCodeAt(0) + i) % BOT_NAMES.length;
@@ -156,6 +173,16 @@ export async function matchMaker() {
       round: 1,
       lastActivity: Date.now(),
     });
+
+    // Notify all real players that their match is ready
+    const { io } = require("../app");
+    for (const p of result.inMemoryPlayers) {
+      if (!p.isBot) {
+        io.to(`lobby_${p.playerId}`).emit("matchFound", {
+          gameId: result.newGame.id,
+        });
+      }
+    }
 
     logger.debug(
       `Game ${result.newGame.id} initialized: ${selectedEntries.length} Humans, ${botCount} Bots.`,

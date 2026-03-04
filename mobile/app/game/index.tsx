@@ -6,6 +6,7 @@ import { useAuthStore } from "@/src/stores/authStore";
 import { LogOut, Gamepad2, Trophy, Wallet, Zap, History, Settings, ChevronRight, Siren } from "lucide-react-native";
 import CrewmateAvatar from "@/src/components/CrewmateAvatar";
 import GameButton from "@/src/components/GameButton";
+import { MatchmakingModal } from "@/src/components/MatchmakingModal";
 import { useRouter } from "expo-router";
 import { createPracticeGameApi } from "@/src/api/game";
 import { Toast } from "toastify-react-native";
@@ -13,8 +14,9 @@ import { Toast } from "toastify-react-native";
 export default function GameHomeScreen() {
     const { user, logout } = useAuthStore();
     const router = useRouter();
+    const [isMatchmaking, setIsMatchmaking] = React.useState(false);
 
-    const onStartGame = () => { console.log("Start Matchmaking"); };
+    const onStartGame = () => { setIsMatchmaking(true); };
 
     const onPracticeGame = async () => {
         const { data, success } = await createPracticeGameApi();
@@ -168,6 +170,14 @@ export default function GameHomeScreen() {
             </ScrollView>
 
             <SetUsernameModal />
-        </SafeAreaView>
+            <MatchmakingModal
+                isOpen={isMatchmaking}
+                onClose={() => setIsMatchmaking(false)}
+                onMatchFound={(gameId) => {
+                    setIsMatchmaking(false);
+                    router.push(`/game/${gameId}`);
+                }}
+            />
+        </SafeAreaView >
     );
 }
