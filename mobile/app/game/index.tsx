@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, ImageBackground, ActivityIndi
 import { SafeAreaView } from "react-native-safe-area-context";
 import SetUsernameModal from "@/src/components/SetUsernameModal";
 import { useAuthStore } from "@/src/stores/authStore";
-import { LogOut, Gamepad2, Trophy, Wallet, Zap, History, Settings, ChevronRight, Siren } from "lucide-react-native";
+import { LogOut, Gamepad2, Trophy, Wallet, Zap, History, Settings, ChevronRight, Siren, HelpCircle, BookOpen } from "lucide-react-native";
 import CrewmateAvatar from "@/src/components/CrewmateAvatar";
 import GameButton from "@/src/components/GameButton";
 import { MatchmakingModal } from "@/src/components/MatchmakingModal";
@@ -173,7 +173,7 @@ export default function GameHomeScreen() {
                         <Text className="w-full text-xs font-bold text-slate-400 mt-1">Past kills</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity className="w-full bg-panel border-4 border-[#12121A] rounded-3xl p-4 flex-row items-center justify-between shadow-[4px_4px_0_0_black]">
+                    {/* <TouchableOpacity className="w-full bg-panel border-4 border-[#12121A] rounded-3xl p-4 flex-row items-center justify-between shadow-[4px_4px_0_0_black]">
                         <View className="flex-row items-center gap-4">
                             <View className="w-10 h-10 bg-slate-800 rounded-xl border-2 border-slate-700 items-center justify-center">
                                 <Settings size={24} color="#94a3b8" />
@@ -184,6 +184,22 @@ export default function GameHomeScreen() {
                             </View>
                         </View>
                         <ChevronRight color="#64748b" />
+                    </TouchableOpacity> */}
+
+                    <TouchableOpacity
+                        onPress={() => router.push('/game/how-to-play')}
+                        className="w-full bg-panel border-4 border-[#12121A] rounded-3xl p-4 flex-row items-center justify-between shadow-[4px_4px_0_0_black]"
+                    >
+                        <View className="flex-row items-center gap-4">
+                            <View className="w-10 h-10 bg-[#8B5CF6]/20 rounded-xl border-2 border-[#8B5CF6]/50 items-center justify-center">
+                                <BookOpen size={24} color="#D946EF" />
+                            </View>
+                            <View className="w-full">
+                                <Text className="w-full font-black text-white text-lg">How to Play</Text>
+                                <Text className="w-full text-xs font-bold text-slate-400">Rules & Strategy Guide</Text>
+                            </View>
+                        </View>
+                        <ChevronRight color="#D946EF" />
                     </TouchableOpacity>
 
                     <View className="w-full mt-2">

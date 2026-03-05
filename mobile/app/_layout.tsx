@@ -78,7 +78,7 @@ function RootLayoutNav() {
 
     if (!hasSeenOnboarding && !inOnboardingGroup) {
       if (router.canDismiss()) router.dismissAll();
-      router.replace("/onboarding/index");
+      router.replace("/onboarding");
     } else if (hasSeenOnboarding) {
       if (isAuthenticated && inAuthGroup) {
         if (router.canDismiss()) router.dismissAll();
