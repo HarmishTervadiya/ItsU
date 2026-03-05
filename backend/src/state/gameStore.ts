@@ -3,6 +3,7 @@ import { type GameState } from "@itsu/shared/src/types/game";
 import { Role } from "@itsu/shared/generated/prisma/enums";
 import { logger } from "../utils/logger";
 import { BotEngine } from "../workers/botEngine";
+import { config } from "../config";
 
 const PHASE_DURATIONS = {
   LOBBY: 7000,
@@ -130,7 +131,10 @@ class GameManager {
     const game = this.activeGames.get(gameId);
     if (!game) return;
 
-    if (this.getAlivePlayer(game, senderId)) {
+    if (
+      this.getAlivePlayer(game, senderId) &&
+      config.NODE_ENV === "development"
+    ) {
       // Debug Win Command - To simulate the real user win situation
       if (message.trim().toLowerCase() === "/win") {
         logger.info(
