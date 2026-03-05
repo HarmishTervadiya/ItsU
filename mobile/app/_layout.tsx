@@ -20,6 +20,7 @@ configureReanimatedLogger({
 });
 import "../global.css";
 import { useAuthStore } from "@/src/stores/authStore";
+import { useOnboardingStore } from "@/src/stores/onboardingStore";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export {
@@ -36,11 +37,13 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  const hydrate = useAuthStore((s) => s.hydrate);
-  const isHydrated = useAuthStore((s) => s.isHydrated);
+  const hydrateAuth = useAuthStore((s) => s.hydrate);
+  const isAuthHydrated = useAuthStore((s) => s.isHydrated);
+
+  const isOnboardingHydrated = useOnboardingStore((s) => s.isHydrated);
 
   useEffect(() => {
-    hydrate();
+    hydrateAuth();
   }, []);
 
   useEffect(() => {
@@ -48,12 +51,12 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded && isHydrated) {
+    if (loaded && isAuthHydrated && isOnboardingHydrated) {
       SplashScreen.hideAsync();
     }
-  }, [loaded, isHydrated]);
+  }, [loaded, isAuthHydrated, isOnboardingHydrated]);
 
-  if (!loaded || !isHydrated) {
+  if (!loaded || !isAuthHydrated || !isOnboardingHydrated) {
     return null;
   }
 
@@ -62,6 +65,8 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasSeenOnboarding = useOnboardingStore((s) => s.hasSeenOnboarding);
+
   const segments = useSegments();
   const rootNavigationState = useRootNavigationState();
 
@@ -69,17 +74,23 @@ function RootLayoutNav() {
     if (!rootNavigationState?.key || !segments.length) return;
 
     const inAuthGroup = segments[0] === "auth";
+    const inOnboardingGroup = segments[0] === "onboarding";
 
-    if (isAuthenticated && inAuthGroup) {
+    if (!hasSeenOnboarding && !inOnboardingGroup) {
       if (router.canDismiss()) router.dismissAll();
-      router.replace("/game");
-    } else if (!isAuthenticated && !inAuthGroup) {
-      if (router.canDismiss()) router.dismissAll();
-      router.replace("/auth/login");
+      router.replace("/onboarding/index");
+    } else if (hasSeenOnboarding) {
+      if (isAuthenticated && inAuthGroup) {
+        if (router.canDismiss()) router.dismissAll();
+        router.replace("/game");
+      } else if (!isAuthenticated && !inAuthGroup && !inOnboardingGroup) {
+        if (router.canDismiss()) router.dismissAll();
+        router.replace("/auth/login");
+      }
     }
-  }, [isAuthenticated, segments, rootNavigationState?.key]);
+  }, [isAuthenticated, hasSeenOnboarding, segments, rootNavigationState?.key]);
 
-  const initialRoute = isAuthenticated ? "game" : "auth/login";
+  const initialRoute = !hasSeenOnboarding ? "onboarding/index" : isAuthenticated ? "game" : "auth/login";
 
   return (
     <GestureHandlerRootView>
@@ -91,6 +102,7 @@ function RootLayoutNav() {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding/index" options={{ headerShown: false }} />
         <Stack.Screen name="auth/login" options={{ headerShown: false }} />
         <Stack.Screen name="game" />
         <Stack.Screen name="modal" options={{ presentation: "modal" }} />
