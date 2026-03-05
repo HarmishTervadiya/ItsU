@@ -12,6 +12,7 @@ import { VotePhase } from '@/src/components/game/VotePhase';
 import { NightPhase } from '@/src/components/game/NightPhase';
 import { RevealPhase } from '@/src/components/game/RevealPhase';
 import { FinishedPhase } from '@/src/components/game/FinishedPhase';
+import ConfirmationModal from '@/src/components/ConfirmationModal';
 
 export default function GameScreen() {
     const router = useRouter();
@@ -48,6 +49,7 @@ export default function GameScreen() {
 
     const [isRevealing, setIsRevealing] = useState(true);
     const [recentlyKilled, setRecentlyKilled] = useState<any>(null);
+    const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
     useEffect(() => {
         if (game?.status === 'LOBBY' || (game?.status === 'CHAT_PHASE' && isRevealing)) {
@@ -68,6 +70,14 @@ export default function GameScreen() {
     const phase = isRevealing ? 'REVEAL' : (phaseMap[game?.status as string] || 'REVEAL');
 
     const onLeaveGame = () => {
+        if (game?.status === 'FINISHED') {
+            handleConfirmLeave();
+        } else {
+            setShowLeaveConfirm(true);
+        }
+    };
+
+    const handleConfirmLeave = () => {
         disconnect();
         router.replace('/game');
     };
@@ -240,6 +250,24 @@ export default function GameScreen() {
                         </View>
                     )}
                 </Animated.View>
+
+
+                <ConfirmationModal
+                    isOpen={showLeaveConfirm}
+                    onClose={() => setShowLeaveConfirm(false)}
+                    onConfirm={() => {
+                        setShowLeaveConfirm(false);
+                        handleConfirmLeave();
+                    }}
+                    title="Leave Game"
+                    message={myPlayer?.isAlive
+                        ? "Are you sure you want to leave? Abandoning an active mission may result in the loss of your staked funds!"
+                        : "Are you sure you want to leave the match?"
+                    }
+                    confirmText="Leave"
+                    cancelText="Remain"
+                    type={myPlayer?.isAlive ? "warning" : "info"}
+                />
             </View>
         </SafeAreaView>
     );

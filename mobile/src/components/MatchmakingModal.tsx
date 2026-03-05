@@ -204,7 +204,7 @@ export const MatchmakingModal = ({
                                         fullWidth
                                         loading={loading}
                                     >
-                                        STAKE & ENTER
+                                        {loading ? "JOINING..." : "STAKE & ENTER"}
                                     </GameButton>
                                 </View>
                             </View>

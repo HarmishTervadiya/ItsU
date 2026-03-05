@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, ImageBackground } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ImageBackground, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SetUsernameModal from "@/src/components/SetUsernameModal";
 import { useAuthStore } from "@/src/stores/authStore";
@@ -10,21 +10,32 @@ import { MatchmakingModal } from "@/src/components/MatchmakingModal";
 import { useRouter } from "expo-router";
 import { createPracticeGameApi } from "@/src/api/game";
 import { Toast } from "toastify-react-native";
+import ConfirmationModal from "@/src/components/ConfirmationModal";
 
 export default function GameHomeScreen() {
     const { user, logout } = useAuthStore();
     const router = useRouter();
     const [isMatchmaking, setIsMatchmaking] = React.useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+    const [isPracticeLoading, setIsPracticeLoading] = React.useState(false);
+    const [isMatchmakingLoading, setIsMatchmakingLoading] = React.useState(false);
 
-    const onStartGame = () => { setIsMatchmaking(true); };
+    const onStartGame = () => {
+        setIsMatchmakingLoading(true);
+        setIsMatchmaking(true);
+        // Modal opening is fast, but we show feedback briefly
+        setTimeout(() => setIsMatchmakingLoading(false), 300);
+    };
 
     const onPracticeGame = async () => {
+        setIsPracticeLoading(true);
         const { data, success } = await createPracticeGameApi();
         if (success && data?.gameId) {
             router.push(`/game/${data.gameId}`);
         } else {
             Toast.error("Failed to start practice game");
         }
+        setIsPracticeLoading(false);
     };
 
     return (
@@ -49,7 +60,7 @@ export default function GameHomeScreen() {
 
                     {/* Logout Button */}
                     <TouchableOpacity
-                        onPress={logout}
+                        onPress={() => setShowLogoutConfirm(true)}
                         className="w-12 h-12 bg-panel rounded-full border-4 border-[#12121A] items-center justify-center shadow-[2px_2px_0_0_black]"
                     >
                         <LogOut size={20} color={"#D946EF"} strokeWidth={3} />
@@ -90,11 +101,17 @@ export default function GameHomeScreen() {
                                     <Text className="font-bold text-white">High Stakes Only</Text>
                                 </View>
 
-                                {/* Fake Progress/Queue Bar */}
-                                <View className="w-full bg-black/20 h-2 rounded-full overflow-hidden">
-                                    <View className="bg-white w-3/4 h-full rounded-full" />
-                                </View>
-                                <Text className="text-[10px] text-white/60 font-bold mt-1 uppercase w-full text-right">Queue: Fast</Text>
+                                {isMatchmakingLoading ? (
+                                    <ActivityIndicator size="large" color="#ffffff" className="mt-4" />
+                                ) : (
+                                    <>
+                                        {/* Fake Progress/Queue Bar */}
+                                        <View className="w-full bg-black/20 h-2 rounded-full overflow-hidden">
+                                            <View className="bg-white w-3/4 h-full rounded-full" />
+                                        </View>
+                                        <Text className="text-[10px] text-white/60 font-bold mt-1 uppercase w-full text-right">Queue: Fast</Text>
+                                    </>
+                                )}
                             </View>
                         </View>
                     </View>
@@ -108,8 +125,8 @@ export default function GameHomeScreen() {
                             <Trophy size={20} color="white" />
                         </View>
                         <View>
-                            <Text className="text-[10px] font-black text-slate-400 uppercase">Wins</Text>
-                            <Text className="text-xl font-black text-white">42</Text>
+                            <Text className="w-full text-[10px] font-black text-slate-400 uppercase">Wins</Text>
+                            <Text className="w-full text-xl font-black text-white">42</Text>
                         </View>
                     </View>
 
@@ -119,8 +136,8 @@ export default function GameHomeScreen() {
                             <Wallet size={20} color="white" />
                         </View>
                         <View>
-                            <Text className="text-[10px] font-black text-slate-400 uppercase">Balance</Text>
-                            <Text className="text-xl font-black text-white">14 SOL</Text>
+                            <Text className="w-full text-[10px] font-black text-slate-400 uppercase">Balance</Text>
+                            <Text className="w-full text-xl font-black text-white">14 SOL</Text>
                         </View>
                     </View>
                 </View>
@@ -130,21 +147,30 @@ export default function GameHomeScreen() {
 
                     {/* Practice Panel */}
                     <TouchableOpacity
-                        className="w-[48%] bg-panel border-4 border-[#12121A] rounded-3xl p-4 items-start shadow-[4px_4px_0_0_black]"
+                        className={`w-[48%] bg-panel border-4 border-[#12121A] rounded-3xl p-4 items-start shadow-[4px_4px_0_0_black] ${isPracticeLoading ? 'opacity-70' : ''}`}
                         onPress={onPracticeGame}
+                        disabled={isPracticeLoading}
                     >
-                        <Zap size={32} color="#FACC15" className="mb-2" />
-                        <Text className="font-black text-white text-lg mt-1">Practice</Text>
-                        <View className="bg-yellow-500/20 px-2 py-0.5 rounded-full mt-1">
-                            <Text className="text-[10px] font-bold text-yellow-300">No Risk</Text>
-                        </View>
+                        {isPracticeLoading ? (
+                            <View className="w-full items-center justify-center py-4">
+                                <ActivityIndicator size="large" color="#FACC15" />
+                            </View>
+                        ) : (
+                            <>
+                                <Zap size={32} color="#FACC15" className="mb-2" />
+                                <Text className="w-full font-black text-white text-lg mt-1">Practice</Text>
+                                <View className="bg-yellow-500/20 px-2 py-0.5 rounded-full mt-1">
+                                    <Text className="w-full text-[10px] font-bold text-yellow-300">No Risk</Text>
+                                </View>
+                            </>
+                        )}
                     </TouchableOpacity>
 
                     {/* History Panel */}
                     <TouchableOpacity className="w-[48%] bg-panel border-4 border-[#12121A] rounded-3xl p-4 items-start shadow-[4px_4px_0_0_black]">
                         <History size={32} className="text-accent mb-2" color={"#E879F9"} strokeWidth={3} />
-                        <Text className="font-black text-white text-lg mt-1">History</Text>
-                        <Text className="text-xs font-bold text-slate-400 mt-1">Past kills</Text>
+                        <Text className="w-full font-black text-white text-lg mt-1">History</Text>
+                        <Text className="w-full text-xs font-bold text-slate-400 mt-1">Past kills</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity className="w-full bg-panel border-4 border-[#12121A] rounded-3xl p-4 flex-row items-center justify-between shadow-[4px_4px_0_0_black]">
@@ -152,9 +178,9 @@ export default function GameHomeScreen() {
                             <View className="w-10 h-10 bg-slate-800 rounded-xl border-2 border-slate-700 items-center justify-center">
                                 <Settings size={24} color="#94a3b8" />
                             </View>
-                            <View>
-                                <Text className="font-black text-white text-lg">Settings</Text>
-                                <Text className="text-xs font-bold text-slate-500">Audio, Controls, Account</Text>
+                            <View className="w-full">
+                                <Text className="w-full font-black text-white text-lg">Settings</Text>
+                                <Text className="w-full text-xs font-bold text-slate-500">Audio, Controls, Account</Text>
                             </View>
                         </View>
                         <ChevronRight color="#64748b" />
@@ -177,6 +203,18 @@ export default function GameHomeScreen() {
                     setIsMatchmaking(false);
                     router.push(`/game/${gameId}`);
                 }}
+            />
+            <ConfirmationModal
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                onConfirm={() => {
+                    setShowLogoutConfirm(false);
+                    logout();
+                }}
+                title="Logout"
+                message="Are you sure you want to log out of your session?"
+                confirmText="Logout"
+                type="danger"
             />
         </SafeAreaView >
     );
