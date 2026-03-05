@@ -124,7 +124,7 @@ export default function GameHomeScreen() {
                         <View className="bg-yellow-500 p-2 rounded-xl border-2 border-black">
                             <Trophy size={20} color="white" />
                         </View>
-                        <View>
+                        <View className="flex-1">
                             <Text className="w-full text-[10px] font-black text-slate-400 uppercase">Wins</Text>
                             <Text className="w-full text-xl font-black text-white">42</Text>
                         </View>
@@ -135,7 +135,7 @@ export default function GameHomeScreen() {
                         <View className="p-2 rounded-xl border-2 border-black bg-primary">
                             <Wallet size={20} color="white" />
                         </View>
-                        <View>
+                        <View className="flex-1">
                             <Text className="w-full text-[10px] font-black text-slate-400 uppercase">Balance</Text>
                             <Text className="w-full text-xl font-black text-white">14 SOL</Text>
                         </View>

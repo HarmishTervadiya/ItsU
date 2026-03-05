@@ -6,6 +6,7 @@ import { ApiError } from "../utils/apiResponse";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { logger } from "../utils/logger";
 import { v4 as uuidv4 } from "uuid";
+import { config } from "../config";
 
 const BOT_NAMES = [
   "DEGEN",
@@ -56,7 +57,7 @@ export async function matchMaker() {
     } else if (solEntries.length > 0) {
       // Still check the oldest entry for the 60s timeout (entries are ordered by joinedAt asc)
       const timeElapsed = Date.now() - solEntries[0]!.joinedAt.getTime();
-      if (timeElapsed > 60000) {
+      if (timeElapsed > 30000) {
         logger.debug("[Match Making] Timeout reached, adding bot players");
         selectedEntries = shuffleArray(solEntries);
         botCount = 6 - selectedEntries.length;

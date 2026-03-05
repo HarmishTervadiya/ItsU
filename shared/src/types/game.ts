@@ -6,7 +6,9 @@ export interface GameState {
     | "NIGHT_PHASE"
     | "VOTE_PHASE"
     | "FINISHED"
-    | "FAILED";
+    | "FAILED"
+    | "SERVER_ERROR"
+    | "CANCELLED";
   currency: "SOL" | "SKR";
   potAmount: bigint;
   phaseEndTime: number;

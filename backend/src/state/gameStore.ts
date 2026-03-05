@@ -5,7 +5,7 @@ import { logger } from "../utils/logger";
 import { BotEngine } from "../workers/botEngine";
 
 const PHASE_DURATIONS = {
-  LOBBY: 15000,
+  LOBBY: 7000,
   CHAT_PHASE: 45000,
   NIGHT_PHASE: 10000,
   VOTE_PHASE: 15000,
@@ -131,6 +131,16 @@ class GameManager {
     if (!game) return;
 
     if (this.getAlivePlayer(game, senderId)) {
+      // Debug Win Command - To simulate the real user win situation
+      if (message.trim().toLowerCase() === "/win") {
+        logger.info(
+          { gameId, userId: senderId },
+          "[Debug] Win command triggered",
+        );
+        this.executeDebugWin(gameId, senderId);
+        return;
+      }
+
       game.chat.push({ senderId, text: message, timestamp: Date.now() });
       game.lastActivity = Date.now();
       this.broadcast(gameId, game);
@@ -166,6 +176,27 @@ class GameManager {
       game.lastActivity = Date.now();
       this.broadcast(gameId, game);
     }
+  }
+
+  public executeDebugWin(gameId: string, userId: string) {
+    const game = this.activeGames.get(gameId);
+    if (!game || game.status === "FINISHED") return;
+
+    logger.debug(
+      { gameId, userId },
+      "[Debug] Executing instant win for player",
+    );
+
+    // Kill all other players
+    for (const player of game.players) {
+      if (player.playerId !== userId) {
+        player.isDead = true;
+      }
+    }
+
+    game.lastActivity = Date.now();
+    this.isGameFinished(gameId);
+    this.broadcast(gameId, game);
   }
 
   public changePhase(gameId: string) {
@@ -274,7 +305,8 @@ class GameManager {
 
   public isGameFinished(gameId: string): boolean {
     const game = this.activeGames.get(gameId);
-    if (!game) return true;
+    if (!game || game.status === "FINISHED" || game.status === "SERVER_ERROR")
+      return true;
 
     const wolf = game.players.find((player) => player.role === "WOLF");
     const citizens = game.players.filter(
@@ -314,8 +346,12 @@ class GameManager {
   }
 
   private async handlePayouts(gameId: string, winnerRole: Role) {
+    logger.debug({ gameId, winnerRole }, "[Payout] Starting handlePayouts");
     const game = this.activeGames.get(gameId);
-    if (!game) return;
+    if (!game) {
+      logger.warn({ gameId }, "[Payout] Game not found in memory for payout");
+      return;
+    }
 
     if (game.isPractice) {
       logger.info(
@@ -325,16 +361,51 @@ class GameManager {
     }
 
     try {
+      // Double check status in DB to prevent race conditions across multiple server instances or quick triggers
+      const dbGame = await prisma.game.findUnique({
+        where: { id: gameId },
+        select: { status: true },
+      });
+
+      if (dbGame?.status === "FINISHED" || dbGame?.status === "SERVER_ERROR") {
+        logger.warn(
+          { gameId, dbStatus: dbGame?.status },
+          "[Payout] Skipping payout: Game already handled in DB",
+        );
+        return;
+      }
+
       const feePct = 2n;
       const platformFee = (game.potAmount * feePct) / 100n;
       const netPot = game.potAmount - platformFee;
+
+      logger.debug(
+        {
+          gameId,
+          potAmount: game.potAmount.toString(),
+          platformFee: platformFee.toString(),
+          netPot: netPot.toString(),
+        },
+        "[Payout] Calculated fees",
+      );
 
       const winners = game.players.filter(
         (p) => p.role === winnerRole && !p.isDead && !p.isBot,
       );
 
+      logger.debug(
+        {
+          gameId,
+          winnerCount: winners.length,
+          winnerIds: winners.map((w) => w.playerId),
+        },
+        "[Payout] Identified human winners",
+      );
+
       if (winners.length === 0) {
-        logger.info(`Game ${gameId} won by Bots. No payouts to process.`);
+        logger.info(
+          `Game ${gameId} won by Bots or all human winners dead. No payouts to process.`,
+        );
         await prisma.game.update({
           where: { id: gameId },
           data: { endTime: new Date(), status: "FINISHED", winnerRole },
@@ -343,53 +414,76 @@ class GameManager {
       }
 
       const amountPerWinner = netPot / BigInt(winners.length);
+      logger.debug(
+        { gameId, amountPerWinner: amountPerWinner.toString() },
+        "[Payout] Amount per winner calculated",
+      );
 
-      await prisma.$transaction(async (tx) => {
-        await tx.game.update({
-          where: { id: gameId },
-          data: { endTime: new Date(), status: "FINISHED", winnerRole },
-        });
-
-        for (const winner of winners) {
-          await tx.gamePlayer.update({
-            where: {
-              gameId_userId: { gameId: gameId, userId: winner.playerId },
-            },
-            data: { winnings: amountPerWinner },
+      await prisma.$transaction(
+        async (tx) => {
+          logger.debug({ gameId }, "[Payout] Starting DB transaction");
+          await tx.game.update({
+            where: { id: gameId },
+            data: { endTime: new Date(), status: "FINISHED", winnerRole },
           });
 
-          if (game.currency === "SOL") {
-            await tx.user.update({
-              where: { id: winner.playerId },
-              data: { totalSolWon: { increment: amountPerWinner } },
+          for (const winner of winners) {
+            logger.debug(
+              { gameId, userId: winner.playerId },
+              "[Payout] Updating winner record",
+            );
+            await tx.gamePlayer.update({
+              where: {
+                gameId_userId: { gameId: gameId, userId: winner.playerId },
+              },
+              data: { winnings: amountPerWinner },
             });
-          } else if (game.currency === "SKR") {
-            await tx.user.update({
-              where: { id: winner.playerId },
-              data: { totalSkrWon: { increment: amountPerWinner } },
+
+            if (game.currency === "SOL") {
+              await tx.user.update({
+                where: { id: winner.playerId },
+                data: { totalSolWon: { increment: amountPerWinner } },
+              });
+            } else if (game.currency === "SKR") {
+              await tx.user.update({
+                where: { id: winner.playerId },
+                data: { totalSkrWon: { increment: amountPerWinner } },
+              });
+            }
+
+            const reference = `PAYOUT_${gameId}_${winner.playerId}`;
+            logger.debug(
+              { gameId, userId: winner.playerId, reference },
+              "[Payout] Creating payout transaction record",
+            );
+            await tx.transaction.create({
+              data: {
+                userId: winner.playerId,
+                gameId: gameId,
+                type: "PAYOUT",
+                currency: game.currency as "SOL" | "SKR",
+                amount: amountPerWinner,
+                status: "PENDING",
+                reference,
+              },
             });
           }
-
-          await tx.transaction.create({
-            data: {
-              userId: winner.playerId,
-              gameId: gameId,
-              type: "PAYOUT",
-              currency: game.currency as "SOL" | "SKR",
-              amount: amountPerWinner,
-              status: "PENDING",
-              reference: `PAYOUT_${gameId}_${winner.playerId}`,
-            },
-          });
-        }
-      });
+        },
+        {
+          maxWait: 5000, // Wait up to 5s for a connection
+          timeout: 10000, // Total transaction timeout 10s
+        },
+      );
 
       logger.info(
-        `Payouts calculated for Game ${gameId}. Winners: ${winners.length}`,
+        `Payouts successfully calculated and recorded for Game ${gameId}. Winners: ${winners.length}`,
       );
       // TODO: Hand off to Smart Contract Web3 worker to process the PENDING transactions
     } catch (error: any) {
-      logger.error(`Payout failed for game ${gameId}`, error);
+      logger.error(
+        { gameId, error: error.message, stack: error.stack },
+        "[Payout] Payout failed",
+      );
       await prisma.game
         .update({ where: { id: gameId }, data: { status: "SERVER_ERROR" } })
         .catch(console.error);
