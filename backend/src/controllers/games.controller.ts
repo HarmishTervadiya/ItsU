@@ -28,86 +28,79 @@ const BOT_NAMES = [
 ];
 
 // Todo: Change this with env or db config
-const destination = "9uUYYvkEjEQTd7T5VgqEFkiWgFnTsRfiDqVEdwz5BEDS";
+const destination = config.ITSU_MAIN_WALLET;
 
 export const pushToGameQueue = asyncHandler(async (req, res) => {
   const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
   const { signature } = req.body;
-  let config: GetVersionedTransactionConfig = {
-    commitment: "finalized",
-    maxSupportedTransactionVersion: 0,
-  };
-
-  logger.debug({ path: req.originalUrl }, "[Join Queue] Verifying transaction");
-
-  const transaction = await connection.getParsedTransaction(signature, config);
-
-  if (!transaction) {
-    throw new ApiError(400, "TRANSACTION_NOT_FOUND", "Transaction not found");
-  }
 
   logger.debug(
-    { path: req.originalUrl, transaction },
-    "[Join Queue] Transaction found in blockchain",
+    { path: req.originalUrl, signature },
+    "[Join Queue] Verifying transaction",
   );
 
-  const existingTransaction = await prisma.transaction.findUnique({
-    where: { txSignature: signature },
+  const transaction = await connection.getParsedTransaction(signature, {
+    commitment: "confirmed",
+    maxSupportedTransactionVersion: 0,
   });
 
-  if (!existingTransaction)
-    throw new ApiError(
-      404,
-      "TRANSACTION_NOT_FOUND",
-      "Transaction not found in database",
-    );
-
-  if (existingTransaction.status !== "PENDING") {
+  if (!transaction) {
     throw new ApiError(
       400,
-      "TRANSACTION_ALREADY_PROCESSED",
-      "Transaction has already been processed.",
+      "TRANSACTION_NOT_FOUND",
+      "Transaction not found on-chain",
+    );
+  }
+
+  const { accountKeys } = transaction.transaction.message;
+  const pubkeys = accountKeys.map((k) => k.pubkey.toBase58());
+
+  // Find a pending transaction for this user that matches one of the reference keys in the on-chain tx
+  const existingTransaction = await prisma.transaction.findFirst({
+    where: {
+      userId: req.user?.id,
+      status: "PENDING",
+      reference: { in: pubkeys },
+    },
+  });
+
+  if (!existingTransaction) {
+    throw new ApiError(
+      404,
+      "TRANSACTION_NOT_MATCHED",
+      "No pending transaction found matching this signature's reference keys",
     );
   }
 
   logger.debug(
-    { path: req.originalUrl },
-    "[Join Queue] Transaction found in db",
+    { reference: existingTransaction.reference },
+    "[Join Queue] Transaction matched with DB record",
   );
 
-  const { accountKeys, instructions } = transaction.transaction.message;
-  const referenceKey = new PublicKey(existingTransaction.reference);
-  const signatureInstruction: any = instructions[0];
-
-  const isValid = accountKeys.some(
-    (account) => account.pubkey.toBase58() === referenceKey.toBase58(),
-  );
-  logger.debug(
-    { referenceKey, isValid },
-    "[Join Queue] Transaction validated successfully",
-  );
+  // Basic validation: check if destination matches
+  const transferInstruction: any =
+    transaction.transaction.message.instructions.find(
+      (ix: any) => ix.program === "system" && ix.parsed?.type === "transfer",
+    );
 
   if (
-    !isValid ||
-    !signatureInstruction ||
-    signatureInstruction.parsed.info.destination !== destination
+    !transferInstruction ||
+    transferInstruction.parsed.info.destination !== destination
   ) {
     throw new ApiError(
       400,
-      "INVALID_TRANSACTION",
-      "Invalid transaction details",
+      "INVALID_DESTINATION",
+      "Transaction sent to wrong wallet",
     );
   }
-
-  logger.debug(
-    { referenceKey, isValid },
-    "[Join Queue] Transaction validated successfully",
-  );
 
   const [updatedTransaction, newQueueEntry] = await prisma.$transaction([
     prisma.transaction.update({
       where: { id: existingTransaction.id },
-      data: { status: "CONFIRMED" },
+      data: {
+        status: "CONFIRMED",
+        txSignature: signature,
+      },
     }),
     prisma.queueEntry.create({
       data: {
@@ -117,26 +110,10 @@ export const pushToGameQueue = asyncHandler(async (req, res) => {
       },
     }),
   ]);
-  logger.debug(
-    { updatedTransaction },
-    "[Join Queue] Transaction status updated to CONFIRMED",
-  );
-
-  if (!newQueueEntry) {
-    await prisma.transaction.update({
-      where: { id: existingTransaction.id },
-      data: { status: "FAILED" },
-    });
-    throw new ApiError(
-      500,
-      "INTERNAL_SERVER_ERROR",
-      "Failed to create new queue entry",
-    );
-  }
 
   logger.debug(
-    { newQueueEntry },
-    "[Join Queue] Successfully created new queue entry",
+    { txId: updatedTransaction.id },
+    "[Join Queue] Transaction confirmed and user added to queue",
   );
 
   startMatchMaker();
@@ -192,6 +169,7 @@ export const pushToGameQueueTest = asyncHandler(async (req, res) => {
 });
 
 import { MatchStatus } from "@itsu/shared/generated/prisma/enums";
+import { config } from "../config";
 
 export const getActiveGame = asyncHandler(async (req, res) => {
   const userId = req.user?.id;

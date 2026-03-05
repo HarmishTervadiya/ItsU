@@ -2,11 +2,15 @@ import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, TouchableOpacity, Modal, Animated } from "react-native";
 import { X, Play, Coins, Zap, ShieldAlert, Crosshair } from "lucide-react-native";
 import { GameButton } from "./GameButton";
-import { joinTestQueueApi } from "../api/game";
+import { joinQueueApi } from "../api/game";
+import { addStakeTransactionApi } from "../api/transactions";
 import { Toast } from "toastify-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAuthStore } from "@/src/stores/authStore";
 import { useGameStore } from "@/src/stores/gameStore";
+import { useWallet } from "../hooks/useWallet";
+import { Keypair } from "@solana/web3.js";
+import { config } from "../config";
 
 interface MatchmakingModalProps {
     isOpen: boolean;
@@ -21,6 +25,7 @@ export const MatchmakingModal = ({
 }: MatchmakingModalProps) => {
     const { user } = useAuthStore();
     const { lobbySocket, connectToLobby } = useGameStore();
+    const { sendSOL } = useWallet();
     const [step, setStep] = useState<"select" | "finding">("select");
     const [currency, setCurrency] = useState<"SOL" | "SKR">("SOL");
     const [loading, setLoading] = useState(false);
@@ -59,25 +64,54 @@ export const MatchmakingModal = ({
         }
 
         setLoading(true);
+        try {
+            // Step 1: Generate reference key for server-side verification
+            const reference = Keypair.generate();
+            const stakeAmount = currency === "SOL" ? 0.001 : 100;
+            const lamports = currency === "SOL" ? 1000000 : 100;
 
-        // Step 1: HTTP POST to join the queue
-        console.log("[MatchmakingModal] Calling joinTestQueueApi...");
-        const { success, error } = await joinTestQueueApi();
-        console.log("[MatchmakingModal] joinTestQueueApi result:", { success, error });
+            // Step 2: Record intent in DB
+            console.log("[MatchmakingModal] Recording stake intent...");
+            const { success: recordSuccess, error: recordError } = await addStakeTransactionApi({
+                reference: reference.publicKey.toBase58(),
+                currency,
+                amount: lamports,
+            });
 
-        if (!success) {
-            Toast.error(error || "Failed to join matchmaking queue");
+            if (!recordSuccess) {
+                throw new Error(recordError || "Failed to initiate stake transaction");
+            }
+
+            // Step 3: Send SOL with reference
+            console.log("[MatchmakingModal] Sending SOL...");
+            const signature = await sendSOL(
+                config.ITSU_MAIN_WALLET,
+                stakeAmount,
+                reference.publicKey
+            );
+
+            if (!signature) {
+                throw new Error("Transaction cancelled or failed");
+            }
+
+            // Step 4: Join queue with signature
+            console.log("[MatchmakingModal] Joining queue with signature:", signature);
+            const { success, error } = await joinQueueApi(signature);
+
+            if (!success) {
+                throw new Error(error || "Failed to join matchmaking queue");
+            }
+
+            // Step 5: On success, connect lobby socket
+            console.log("[MatchmakingModal] Connecting lobby socket...");
+            connectToLobby(user.id);
+            setStep("finding");
+        } catch (err: any) {
+            console.error("[MatchmakingModal] Staking error:", err);
+            Toast.error(err.message || "Something went wrong");
+        } finally {
             setLoading(false);
-            return;
         }
-
-        // Step 2: On success, connect lobby socket to receive matchFound
-        console.log("[MatchmakingModal] Connecting lobby socket...");
-        connectToLobby(user.id);
-
-        // Step 3: Move to "finding" state (useEffect above will listen for matchFound)
-        setStep("finding");
-        setLoading(false);
     };
 
     const primaryColor = "#14F195";
@@ -146,7 +180,7 @@ export const MatchmakingModal = ({
                                                 />
                                             </View>
                                             <Text className="w-full text-center font-black text-white text-lg leading-none">
-                                                1 SOL
+                                                0.001 SOL
                                             </Text>
                                         </View>
                                     </TouchableOpacity>
@@ -232,7 +266,7 @@ export const MatchmakingModal = ({
                                             Staked:{" "}
                                             <Text className="text-white">
                                                 {{
-                                                    SOL: "1 SOL",
+                                                    SOL: "0.001 SOL",
                                                     SKR: "100 SKR",
                                                 }[currency]}
                                             </Text>

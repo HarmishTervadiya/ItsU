@@ -1,5 +1,11 @@
-import { useState } from "react";
-import { PublicKey } from "@solana/web3.js";
+import { useState, useCallback, useMemo } from "react";
+import {
+  Connection,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+} from "@solana/web3.js";
 import {
   transact,
   Web3MobileWallet,
@@ -20,8 +26,14 @@ export const useWallet = () => {
   const publicKey = useAuthStore((s) => s.publicKey);
   const setPublicKey = useAuthStore((s) => s.setPublicKey);
   const [connecting, setConnecting] = useState<boolean>(false);
-  const cluster = "mainnet-beta";
+  const [sending, setSending] = useState<boolean>(false);
+  const cluster = "devnet";
   const login = useAuthStore((s) => s.login);
+
+  const connection = useMemo(
+    () => new Connection("https://api.devnet.solana.com", "confirmed"),
+    [],
+  );
 
   const signInWithSolana = async () => {
     setConnecting(true);
@@ -97,11 +109,117 @@ export const useWallet = () => {
     setPublicKey(null);
   };
 
+  const sendSOL = useCallback(
+    async (toAddress: string, amountSOL: number, reference?: PublicKey) => {
+      console.log("[useWallet] sendSOL() called");
+      console.log("[useWallet] to:", toAddress, "amount:", amountSOL);
+
+      if (!publicKey) {
+        throw new Error("Wallet not connected");
+      }
+
+      setSending(true);
+      try {
+        const toPublicKey = new PublicKey(toAddress);
+        const { blockhash, lastValidBlockHeight } =
+          await connection.getLatestBlockhash();
+
+        const lamports = Math.round(amountSOL * LAMPORTS_PER_SOL);
+        const transaction = new Transaction();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = publicKey;
+
+        const transferInstruction = SystemProgram.transfer({
+          fromPubkey: publicKey,
+          toPubkey: toPublicKey,
+          lamports,
+        });
+
+        if (reference) {
+          transferInstruction.keys.push({
+            pubkey: reference,
+            isSigner: false,
+            isWritable: false,
+          });
+        }
+
+        transaction.add(transferInstruction);
+
+        const signedTransaction = await transact(
+          async (wallet: Web3MobileWallet) => {
+            await wallet.authorize({
+              chain: `solana:${cluster}`,
+              identity: APP_IDENTITY,
+            });
+
+            const signedTxs = await wallet.signTransactions({
+              transactions: [transaction],
+            });
+
+            if (!signedTxs || signedTxs.length === 0) {
+              throw new Error("No signed transaction returned from wallet");
+            }
+
+            return signedTxs[0];
+          },
+        );
+
+        // Required delay for MWA networking context restoration
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        const rawTransaction = signedTransaction.serialize();
+        let signature: string | null = null;
+        let lastError: Error | null = null;
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            console.log(`[useWallet] send attempt ${attempt}...`);
+            signature = await connection.sendRawTransaction(rawTransaction, {
+              skipPreflight: true,
+              maxRetries: 2,
+            });
+            break;
+          } catch (err: any) {
+            lastError = err;
+            console.log(`[useWallet] attempt ${attempt} failed:`, err.message);
+            if (attempt < 3) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          }
+        }
+
+        if (!signature) {
+          throw new Error(lastError?.message || "Failed to send transaction");
+        }
+
+        console.log("[useWallet] waiting for confirmation...");
+        const confirmation = await connection.confirmTransaction(
+          { signature, blockhash, lastValidBlockHeight },
+          "confirmed",
+        );
+
+        if (confirmation.value.err) {
+          throw new Error("Transaction failed during confirmation");
+        }
+
+        return signature;
+      } catch (error: any) {
+        console.error("Error while sending sol:", error);
+        throw error;
+      } finally {
+        setSending(false);
+      }
+    },
+    [publicKey, connection, cluster],
+  );
+
   return {
     publicKey,
     connecting,
+    sending,
     connected: !!publicKey,
     signInWithSolana,
     disconnectWallet,
+    sendSOL,
   };
 };

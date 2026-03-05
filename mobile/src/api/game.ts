@@ -27,6 +27,12 @@ export const joinTestQueueApi = () => {
   );
 };
 
+export const joinQueueApi = (signature: string) => {
+  return withApiErrorHandler<JoinQueueResponse>(() =>
+    apiClient.post("/games/queue/join", { signature }),
+  );
+};
+
 export const getActiveGameApi = () => {
   return withApiErrorHandler<ActiveGameResponse>(() =>
     apiClient.get("/games/active"),

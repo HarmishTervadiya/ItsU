@@ -26,4 +26,5 @@ export interface GameState {
   isPractice?: boolean;
   round: number;
   winnerRole?: "WOLF" | "CITIZEN";
+  nightKillId?: string;
 }

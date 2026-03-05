@@ -36,10 +36,10 @@ export const FinishedPhase: React.FC<FinishedPhaseProps> = ({ onLeaveGame, winne
             <TouchableOpacity
                 onPress={onLeaveGame}
                 activeOpacity={0.7}
-                className="bg-primary border-4 border-[#12121A] rounded-2xl px-8 py-3 shadow-[4px_4px_0_0_black]"
+                className="w-72 bg-primary border-4 border-[#12121A] rounded-2xl px-8 py-3 shadow-[4px_4px_0_0_black]"
                 style={{ pointerEvents: 'auto' }}
             >
-                <Text className="text-sm font-black text-white uppercase tracking-widest text-center">Return to Lobby</Text>
+                <Text className="w-full text-center text-wrap text-sm font-black text-white uppercase tracking-widest">Return to Lobby</Text>
             </TouchableOpacity>
         </View>
     );

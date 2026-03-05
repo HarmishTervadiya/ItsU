@@ -161,20 +161,9 @@ class GameManager {
     const target = this.getAlivePlayer(game, targetId);
 
     if (isWolfAlive && target) {
-      target.isDead = true;
+      // Record the kill intent but don't kill yet
+      game.nightKillId = targetId;
       game.lastActivity = Date.now();
-
-      if (!game.isPractice && !target.isBot) {
-        prisma.gamePlayer
-          .update({
-            where: { gameId_userId: { gameId, userId: targetId } },
-            data: { isDead: true, roundsSurvived: game.totalRounds },
-          })
-          .catch((e) =>
-            logger.error({ gameId }, "DB update failed for Wolf kill", e),
-          );
-      }
-
       this.broadcast(gameId, game);
     }
   }
@@ -193,8 +182,34 @@ class GameManager {
         game.phaseEndTime = Date.now() + PHASE_DURATIONS.NIGHT_PHASE;
         break;
       case "NIGHT_PHASE":
-        game.status = "VOTE_PHASE";
-        game.phaseEndTime = Date.now() + PHASE_DURATIONS.VOTE_PHASE;
+        if (game.nightKillId) {
+          const victim = this.getAlivePlayer(game, game.nightKillId);
+          if (victim) {
+            victim.isDead = true;
+            if (!game.isPractice && !victim.isBot) {
+              prisma.gamePlayer
+                .update({
+                  where: {
+                    gameId_userId: { gameId, userId: game.nightKillId },
+                  },
+                  data: { isDead: true, roundsSurvived: game.totalRounds },
+                })
+                .catch((e) =>
+                  logger.error(
+                    { gameId },
+                    "DB update failed for Night execution",
+                    e,
+                  ),
+                );
+            }
+          }
+          game.nightKillId = undefined; // Reset for next night
+        }
+
+        if (!this.isGameFinished(gameId)) {
+          game.status = "VOTE_PHASE";
+          game.phaseEndTime = Date.now() + PHASE_DURATIONS.VOTE_PHASE;
+        }
         break;
       case "VOTE_PHASE":
         this.processVotes(gameId);

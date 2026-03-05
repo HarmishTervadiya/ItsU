@@ -36,11 +36,14 @@ export const VotePhase: React.FC<VotePhaseProps> = ({ alivePlayers, players }) =
                     <Text className="text-white font-black uppercase text-[10px]">Vote</Text>
                 </View>
 
-                <View className="bg-panel/95 border-4 border-[#12121A] rounded-3xl p-4 pt-5">
+                <View
+                    className="bg-panel/95 border-4 border-[#12121A] rounded-3xl p-4 pt-5"
+                    pointerEvents={alivePlayers.find(p => p.isMe) ? "auto" : "none"}
+                >
                     {hasVoted ? (
                         <View className="items-center py-6">
-                            <Text className="text-accent font-black text-lg uppercase">Vote Casted!</Text>
-                            <Text className="text-slate-400 text-xs font-bold mt-1">Waiting for others...</Text>
+                            <Text className="w-full text-center text-accent font-black text-lg uppercase">Vote Casted!</Text>
+                            <Text className="w-full text-center text-slate-400 text-xs font-bold mt-1">Waiting for others...</Text>
                         </View>
                     ) : (
                         <>

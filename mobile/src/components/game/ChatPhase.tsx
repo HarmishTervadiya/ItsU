@@ -4,7 +4,7 @@ import { MessageSquare, Send } from 'lucide-react-native';
 import { useGameStore } from '@/src/stores/gameStore';
 
 interface ChatPhaseProps {
-    players: { id: string; name: string; color: string; isMe: boolean }[];
+    players: { id: string; name: string; color: string; isMe: boolean, isAlive: boolean }[];
 }
 
 export const ChatPhase: React.FC<ChatPhaseProps> = ({ players }) => {
@@ -56,7 +56,10 @@ export const ChatPhase: React.FC<ChatPhaseProps> = ({ players }) => {
                     </ScrollView>
 
                     {/* Input */}
-                    <View className="flex-row gap-2">
+                    <View
+                        className="flex-row gap-2"
+                        pointerEvents={players.find(p => p.isMe)?.isAlive ? "auto" : "none"}
+                    >
                         <TextInput
                             placeholder="Type message..."
                             placeholderTextColor="#64748b"
