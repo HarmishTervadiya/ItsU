@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, ImageBackground, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ImageBackground, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SetUsernameModal from "@/src/components/SetUsernameModal";
 import { useAuthStore } from "@/src/stores/authStore";
@@ -31,7 +31,7 @@ export default function GameHomeScreen() {
             const fetchStats = async () => {
                 const { data, success } = await getUserStatsApi();
                 if (success && data) {
-                    const balanceSol = (Number(data.totalSolWon) / LAMPORTS_PER_SOL).toFixed(2);
+                    const balanceSol = (Number(data.totalSolWon) / LAMPORTS_PER_SOL).toFixed(3);
                     setStats({ wins: data.totalWins, balance: balanceSol });
                 }
             };
@@ -39,14 +39,26 @@ export default function GameHomeScreen() {
         }, [])
     );
 
-    const onStartGame = () => {
+    const [refreshing, setRefreshing] = React.useState(false);
+
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        const { data, success } = await getUserStatsApi();
+        if (success && data) {
+            const balanceSol = (Number(data.totalSolWon) / LAMPORTS_PER_SOL).toFixed(3);
+            setStats({ wins: data.totalWins, balance: balanceSol });
+        }
+        setRefreshing(false);
+    }, []);
+
+    const onStartGame = React.useCallback(() => {
         setIsMatchmakingLoading(true);
         setIsMatchmaking(true);
         // Modal opening is fast, but we show feedback briefly
         setTimeout(() => setIsMatchmakingLoading(false), 300);
-    };
+    }, []);
 
-    const onPracticeGame = async () => {
+    const onPracticeGame = React.useCallback(async () => {
         setIsPracticeLoading(true);
         const { data, success } = await createPracticeGameApi();
         if (success && data?.gameId) {
@@ -55,7 +67,7 @@ export default function GameHomeScreen() {
             Toast.error("Failed to start practice game");
         }
         setIsPracticeLoading(false);
-    };
+    }, [router]);
 
     return (
         <SafeAreaView className="flex-1 bg-[#1a1a24]">
@@ -63,6 +75,9 @@ export default function GameHomeScreen() {
                 className="flex-1 px-5 relative"
                 contentContainerStyle={{ paddingBottom: 40 }}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D946EF" colors={["#D946EF"]} />
+                }
             >
                 <View className="flex-row items-center justify-between mb-8 z-10 pt-2">
                     <View className="max-w-72 flex-row items-center gap-3 bg-panel p-2 pr-4 rounded-full border-4 border-[#12121A] shadow-md">
@@ -106,9 +121,9 @@ export default function GameHomeScreen() {
                             <View className="flex-row justify-between items-start mb-6 z-10">
                                 <View className="bg-black/30 rounded-lg px-3 py-1 flex-row items-center gap-2">
                                     <View className="w-2 h-2 rounded-full bg-green-400" />
-                                    <Text className="text-xs font-bold text-white uppercase">420 Online</Text>
+                                    <Text className="text-xs font-bold text-white uppercase">Online</Text>
                                 </View>
-                                <Gamepad2 size={48} className="text-primary-dark" style={{ opacity: 0.6, transform: [{ rotate: "12deg" }], marginTop: -8 }} />
+                                <Gamepad2 size={48} className=" text-primary-dark" style={{ opacity: 0.6, transform: [{ rotate: "12deg" }], marginTop: -8 }} />
                             </View>
 
                             {/* Center Content */}
@@ -155,8 +170,8 @@ export default function GameHomeScreen() {
                             <Wallet size={20} color="white" />
                         </View>
                         <View className="flex-1">
-                            <Text className="w-full text-[10px] font-black text-slate-400 uppercase">Total Won</Text>
-                            <Text className="w-full text-xl font-black text-white">{stats.balance} SOL</Text>
+                            <Text className="w-full text-[10px] font-black text-slate-400 uppercase">Total Sol Won</Text>
+                            <Text className="w-full text-xl font-black text-white">{stats.balance}</Text>
                         </View>
                     </View>
                 </View>

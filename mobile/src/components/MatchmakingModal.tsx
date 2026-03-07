@@ -140,7 +140,7 @@ export const MatchmakingModal = ({
                         )}
 
                         {step === "select" ? (
-                            <View className="flex flex-col gap-5 relative z-10 pt-2">
+                            <View key="select" className="gap-5 relative z-10 pt-2">
                                 <View className="items-center mt-2">
                                     <Text className="text-2xl font-black text-white uppercase tracking-wider mb-1">
                                         Choose Stake
@@ -186,38 +186,24 @@ export const MatchmakingModal = ({
                                     </TouchableOpacity>
 
                                     {/* SKR Option */}
-                                    <TouchableOpacity
-                                        onPress={() => setCurrency("SKR")}
-                                        activeOpacity={0.8}
-                                        className={`flex-1 p-4 rounded-2xl border-4 items-center justify-center transition-all ${currency === "SKR"
-                                            ? "bg-[#323552]"
-                                            : "bg-[#161623] border-[#12121A]"
-                                            }`}
-                                        style={
-                                            currency === "SKR"
-                                                ? {
-                                                    borderColor: accentColor,
-                                                    shadowColor: "#7e22ce",
-                                                    shadowOffset: { width: 0, height: 4 },
-                                                    shadowOpacity: 1,
-                                                    shadowRadius: 0,
-                                                    elevation: 4,
-                                                }
-                                                : {}
-                                        }
+                                    <View
+                                        className={`flex-1 p-4 rounded-2xl border-4 items-center justify-center transition-all bg-[#161623] border-[#12121A] opacity-50 relative`}
                                     >
-                                        <View className="items-center gap-2">
+                                        <View className="absolute top-1 bg-accent/20 px-2 py-0.5 rounded-full border border-accent/50 z-10">
+                                            <Text className="text-[8px] font-black text-white uppercase tracking-wider">Coming Soon</Text>
+                                        </View>
+                                        <View className="items-center gap-2 mt-2">
                                             <View className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border-2 border-white/10 mb-1">
                                                 <Zap
                                                     size={20}
-                                                    color={currency === "SKR" ? accentColor : "#94a3b8"}
+                                                    color={"#94a3b8"}
                                                 />
                                             </View>
-                                            <Text className="w-full text-center font-black text-white text-lg leading-none">
+                                            <Text className="w-full text-center font-black text-slate-500 text-lg leading-none">
                                                 100 SKR
                                             </Text>
                                         </View>
-                                    </TouchableOpacity>
+                                    </View>
                                 </View>
 
                                 <View className="bg-red-500/10 border-2 border-red-500/30 rounded-xl p-3 flex-row gap-2 mt-2">
@@ -243,7 +229,7 @@ export const MatchmakingModal = ({
                                 </View>
                             </View>
                         ) : (
-                            <View className="flex flex-col items-center gap-6 py-6 pb-2 relative z-10">
+                            <View key="finding" className="items-center gap-6 py-6 pb-2 relative z-10">
                                 <View className="relative mt-4 mb-2 justify-center items-center">
                                     <View className="w-24 h-24 bg-[#161623] border-4 border-[#12121A] rounded-full flex items-center justify-center shadow-inner relative z-10 animate-pulse">
                                         <Crosshair

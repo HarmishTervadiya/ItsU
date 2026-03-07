@@ -102,8 +102,10 @@ export const pushToGameQueue = asyncHandler(async (req, res) => {
         txSignature: signature,
       },
     }),
-    prisma.queueEntry.create({
-      data: {
+    prisma.queueEntry.upsert({
+      where: { userId: req.user?.id! },
+      update: {},
+      create: {
         userId: req.user?.id!,
         currency: existingTransaction.currency,
         intent: "PENDING",

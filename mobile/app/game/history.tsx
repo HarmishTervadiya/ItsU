@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FlashList } from "@shopify/flash-list";
 import { useRouter } from "expo-router";
@@ -11,6 +11,16 @@ export default function GameHistoryScreen() {
     const router = useRouter();
     const [history, setHistory] = useState<GameHistoryItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        const { data, success } = await getGameHistoryApi();
+        if (success && data) {
+            setHistory(data);
+        }
+        setRefreshing(false);
+    }, []);
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -23,10 +33,10 @@ export default function GameHistoryScreen() {
         fetchHistory();
     }, []);
 
-    const renderItem = ({ item }: { item: GameHistoryItem }) => {
+    const renderItem = React.useCallback(({ item }: { item: GameHistoryItem }) => {
         const isWinner = item.winnings !== "0";
-        const solPot = (Number(item.potAmount) / LAMPORTS_PER_SOL).toFixed(2);
-        const solWon = (Number(item.winnings) / LAMPORTS_PER_SOL).toFixed(2);
+        const solPot = (Number(item.potAmount) / LAMPORTS_PER_SOL).toFixed(3);
+        const solWon = (Number(item.winnings) / LAMPORTS_PER_SOL).toFixed(3);
         const date = new Date(item.startTime).toLocaleDateString(undefined, {
             month: "short",
             day: "numeric",
@@ -81,7 +91,7 @@ export default function GameHistoryScreen() {
                 </View>
             </View>
         );
-    };
+    }, []);
 
     return (
         <SafeAreaView className="flex-1 bg-[#1a1a24]">
@@ -105,6 +115,11 @@ export default function GameHistoryScreen() {
                         data={history}
                         renderItem={renderItem}
                         showsVerticalScrollIndicator={false}
+                        keyExtractor={(item) => item.gameId}
+                        pagingEnabled
+                        refreshControl={
+                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D946EF" colors={["#D946EF"]} />
+                        }
                         contentContainerStyle={{ paddingBottom: 40 }}
                         ListEmptyComponent={
                             <View className="flex-1 items-center justify-center mt-20">

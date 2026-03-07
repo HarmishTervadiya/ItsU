@@ -89,17 +89,53 @@ export async function matchMaker() {
     logger.debug("[Match Making] Creating new game");
 
     const result = await prisma.$transaction(async (tx) => {
+      const userTxs = await tx.transaction.findMany({
+        where: {
+          userId: { in: userIds },
+          status: "CONFIRMED",
+          gameId: null,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      // Deduplicate: get only the latest unassigned transaction per user
+      const userTxMap = new Map();
+      for (const t of userTxs) {
+        if (!userTxMap.has(t.userId)) userTxMap.set(t.userId, t);
+      }
+
+      let calculatedPot = 0n;
+      const txIdsToUpdate: string[] = [];
+
+      for (const userId of userIds) {
+        const t = userTxMap.get(userId);
+        if (t) {
+          calculatedPot += t.amount;
+          txIdsToUpdate.push(t.id);
+        } else {
+          // Fallback for test queues where no transaction exists
+          calculatedPot += BigInt(LAMPORTS_PER_SOL * 0.5);
+        }
+      }
+
       const newGame = await tx.game.create({
         data: {
           currency: Currency.SOL,
           hint: randomHint!,
           itemName: randomItem!.name,
-          potAmount: BigInt(LAMPORTS_PER_SOL * 0.5 * selectedEntries.length),
+          potAmount: calculatedPot,
           timeLimit: 600,
           status: "ONGOING",
           itemId: randomItem!.id,
         },
       });
+
+      if (txIdsToUpdate.length > 0) {
+        await tx.transaction.updateMany({
+          where: { id: { in: txIdsToUpdate } },
+          data: { gameId: newGame.id },
+        });
+      }
 
       logger.debug("[Match Making] Assigning wolf role");
 

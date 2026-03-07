@@ -318,6 +318,7 @@ class GameManager {
     );
 
     if (wolf?.isDead) {
+      game.totalRounds = game.round;
       game.status = "FINISHED";
       game.winnerRole = "CITIZEN";
       this.handlePayouts(gameId, Role.CITIZEN);
@@ -325,6 +326,7 @@ class GameManager {
     }
 
     if (citizens.length <= 1) {
+      game.totalRounds = game.round;
       game.status = "FINISHED";
       game.winnerRole = "WOLF";
       this.handlePayouts(gameId, Role.WOLF);
@@ -339,6 +341,7 @@ class GameManager {
         logger.info(
           `Practice Game ${gameId} ended early: All human players are dead.`,
         );
+        game.totalRounds = game.round;
         game.status = "FINISHED";
         game.winnerRole = "WOLF"; // Default WOLF win if humans die in practice mode
         this.handlePayouts(gameId, Role.WOLF);
@@ -397,22 +400,39 @@ class GameManager {
         (p) => p.role === winnerRole && !p.isDead && !p.isBot,
       );
 
+      const aliveHumans = game.players.filter((p) => !p.isDead && !p.isBot);
+
       logger.debug(
         {
           gameId,
           winnerCount: winners.length,
           winnerIds: winners.map((w) => w.playerId),
+          aliveHumanCount: aliveHumans.length,
         },
-        "[Payout] Identified human winners",
+        "[Payout] Identified human winners and alive humans",
       );
 
       if (winners.length === 0) {
         logger.info(
-          `Game ${gameId} won by Bots or all human winners dead. No payouts to process.`,
+          `Game ${gameId} won by Bots or all human winners dead. No payouts to process, but updating survival stats.`,
         );
-        await prisma.game.update({
-          where: { id: gameId },
-          data: { endTime: new Date(), status: "FINISHED", winnerRole },
+        await prisma.$transaction(async (tx) => {
+          await tx.game.update({
+            where: { id: gameId },
+            data: {
+              endTime: new Date(),
+              status: "FINISHED",
+              winnerRole,
+              totalRounds: game.totalRounds,
+            },
+          });
+
+          for (const player of aliveHumans) {
+            await tx.gamePlayer.update({
+              where: { gameId_userId: { gameId, userId: player.playerId } },
+              data: { roundsSurvived: game.totalRounds },
+            });
+          }
         });
         return;
       }
@@ -428,21 +448,34 @@ class GameManager {
           logger.debug({ gameId }, "[Payout] Starting DB transaction");
           await tx.game.update({
             where: { id: gameId },
-            data: { endTime: new Date(), status: "FINISHED", winnerRole },
+            data: {
+              endTime: new Date(),
+              status: "FINISHED",
+              winnerRole,
+              totalRounds: game.totalRounds,
+            },
           });
 
-          for (const winner of winners) {
-            logger.debug(
-              { gameId, userId: winner.playerId },
-              "[Payout] Updating winner record",
-            );
-            await tx.gamePlayer.update({
-              where: {
-                gameId_userId: { gameId: gameId, userId: winner.playerId },
-              },
-              data: { winnings: amountPerWinner },
-            });
+          // Update roundsSurvived for players who lived until the end
+          // For winners, we also update their winnings in the same call
+          const winnerIds = new Set(winners.map((w) => w.playerId));
 
+          for (const player of game.players) {
+            if (!player.isBot && !player.isDead) {
+              const isWinner = winnerIds.has(player.playerId);
+
+              await tx.gamePlayer.update({
+                where: { gameId_userId: { gameId, userId: player.playerId } },
+                data: {
+                  roundsSurvived: game.totalRounds,
+                  ...(isWinner ? { winnings: amountPerWinner } : {}),
+                },
+              });
+            }
+          }
+
+          // Now create transactions and add balances for winners
+          for (const winner of winners) {
             if (game.currency === "SOL") {
               await tx.user.update({
                 where: { id: winner.playerId },
