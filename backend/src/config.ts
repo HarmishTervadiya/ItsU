@@ -7,4 +7,9 @@ export const config = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY!,
   SARVAM_API_KEY: process.env.SARVAM_API_KEY!,
   ITSU_MAIN_WALLET: process.env.ITSU_MAIN_WALLET!,
+  PAYOUT_PRIVATE_KEY: process.env.PAYOUT_PRIVATE_KEY || "", // Can be base58 or byte array
+  SOLANA_NETWORK:
+    (process.env.SOLANA_NETWORK as "devnet" | "mainnet-beta" | "testnet") ||
+    "devnet",
+  SOLANA_RPC_URL: process.env.SOLANA_RPC_URL,
 };

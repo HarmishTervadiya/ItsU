@@ -3,6 +3,7 @@ import { type GameState } from "@itsu/shared/src/types/game";
 import { Role } from "@itsu/shared/generated/prisma/enums";
 import { logger } from "../utils/logger";
 import { BotEngine } from "../workers/botEngine";
+import { PayoutWorker } from "../workers/payoutWorker";
 import { config } from "../config";
 
 const PHASE_DURATIONS = {
@@ -515,7 +516,11 @@ class GameManager {
       logger.info(
         `Payouts successfully calculated and recorded for Game ${gameId}. Winners: ${winners.length}`,
       );
-      // TODO: Hand off to Smart Contract Web3 worker to process the PENDING transactions
+      // Trigger the Web3 worker to process the PENDING transactions asynchronously
+      // It handles fetching pending ones and dispatching them on-chain.
+      PayoutWorker.processPendingPayouts().catch((err: any) => {
+        logger.error({ error: err.message }, "Background PayoutWorker failed");
+      });
     } catch (error: any) {
       logger.error(
         { gameId, error: error.message, stack: error.stack },
