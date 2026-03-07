@@ -1,5 +1,6 @@
 import { Currency } from "../../generated/prisma/enums";
 import * as z from "zod";
+import { STAKE_AMOUNT_LAMPORTS } from "../constants";
 
 export const insertStakeTransactionSchema = z.object({
   reference: z.string().min(1),
@@ -9,5 +10,5 @@ export const insertStakeTransactionSchema = z.object({
       return BigInt(Math.round(Number(val)));
     }
     return val;
-  }, z.bigint().min(1000000n)),
+  }, z.bigint().min(STAKE_AMOUNT_LAMPORTS)),
 });

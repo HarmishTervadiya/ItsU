@@ -12,6 +12,7 @@ import { useGameStore } from "@/src/stores/gameStore";
 import { useWallet } from "../hooks/useWallet";
 import { Keypair } from "@solana/web3.js";
 import { config } from "../config";
+import { STAKE_AMOUNT_SOL, STAKE_AMOUNT_LAMPORTS, STAKE_AMOUNT_SKR, STAKE_DISPLAY } from "../constants";
 
 interface MatchmakingModalProps {
     isOpen: boolean;
@@ -68,8 +69,8 @@ export const MatchmakingModal = ({
         try {
             // Step 1: Generate reference key for server-side verification
             const reference = Keypair.generate();
-            const stakeAmount = currency === "SOL" ? 0.001 : 100;
-            const lamports = currency === "SOL" ? 1000000 : 100;
+            const stakeAmount = currency === "SOL" ? STAKE_AMOUNT_SOL : STAKE_AMOUNT_SKR;
+            const lamports = currency === "SOL" ? STAKE_AMOUNT_LAMPORTS : STAKE_AMOUNT_SKR;
 
             // Step 2: Record intent in DB
             console.log("[MatchmakingModal] Recording stake intent...");
@@ -184,7 +185,7 @@ export const MatchmakingModal = ({
                                                 />
                                             </View>
                                             <Text className="w-full text-center font-black text-white text-lg leading-none">
-                                                0.001 SOL
+                                                {STAKE_DISPLAY.SOL}
                                             </Text>
                                         </View>
                                     </TouchableOpacity>
@@ -204,7 +205,7 @@ export const MatchmakingModal = ({
                                                 />
                                             </View>
                                             <Text className="w-full text-center font-black text-slate-500 text-lg leading-none">
-                                                100 SKR
+                                                {STAKE_DISPLAY.SKR}
                                             </Text>
                                         </View>
                                     </View>
@@ -255,10 +256,7 @@ export const MatchmakingModal = ({
                                         <Text className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">
                                             Staked:{" "}
                                             <Text className="text-white">
-                                                {{
-                                                    SOL: "0.001 SOL",
-                                                    SKR: "100 SKR",
-                                                }[currency]}
+                                                {STAKE_DISPLAY[currency]}
                                             </Text>
                                         </Text>
                                     </View>

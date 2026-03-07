@@ -7,6 +7,7 @@ import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { logger } from "../utils/logger";
 import { v4 as uuidv4 } from "uuid";
 import { config } from "../config";
+import { STAKE_AMOUNT_LAMPORTS } from "@itsu/shared/src/constants";
 
 const BOT_NAMES = [
   "DEGEN",
@@ -114,7 +115,7 @@ export async function matchMaker() {
           txIdsToUpdate.push(t.id);
         } else {
           // Fallback for test queues where no transaction exists
-          calculatedPot += BigInt(LAMPORTS_PER_SOL * 0.5);
+          calculatedPot += STAKE_AMOUNT_LAMPORTS;
         }
       }
 

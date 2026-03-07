@@ -28,12 +28,16 @@ export const useWallet = () => {
   const setPublicKey = useAuthStore((s) => s.setPublicKey);
   const [connecting, setConnecting] = useState<boolean>(false);
   const [sending, setSending] = useState<boolean>(false);
-  const cluster = "devnet";
+  const cluster = (process.env.EXPO_PUBLIC_SOLANA_NETWORK ?? "devnet") as
+    | "devnet"
+    | "mainnet-beta";
+  const rpcUrl =
+    process.env.EXPO_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
   const login = useAuthStore((s) => s.login);
 
   const connection = useMemo(
-    () => new Connection("https://api.devnet.solana.com", "confirmed"),
-    [],
+    () => new Connection(rpcUrl, "confirmed"),
+    [rpcUrl],
   );
 
   const signInWithSolana = async () => {
@@ -102,7 +106,7 @@ export const useWallet = () => {
       console.error("Connect wallet failed:", error.message);
 
       let errorMessage = "Something went wrong";
-    
+
       if (
         error.message?.includes("User cancel") ||
         error.message?.includes("Authorization failed") ||
