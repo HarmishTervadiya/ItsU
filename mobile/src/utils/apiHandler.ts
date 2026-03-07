@@ -15,6 +15,7 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
 
 const api = axios.create({
   baseURL: `${config.SERVER_URL}/api`,
+  timeout: 10000
 });
 
 let isRefreshing = false;

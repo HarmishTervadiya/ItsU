@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, TouchableOpacity, Modal, Animated } from "react-native";
-import { X, Play, Coins, Zap, ShieldAlert, Crosshair } from "lucide-react-native";
+import { View, Text, TouchableOpacity, Modal, Pressable, Image } from "react-native";
+import { X, Play, Zap, ShieldAlert, Crosshair } from "lucide-react-native";
+import SolanaIcon from "@/src/assets/images/icons/solana-icon.png";
+import { Toast } from "toastify-react-native";
 import { GameButton } from "./GameButton";
 import { joinQueueApi } from "../api/game";
 import { addStakeTransactionApi } from "../api/transactions";
-import { Toast } from "toastify-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAuthStore } from "@/src/stores/authStore";
 import { useGameStore } from "@/src/stores/gameStore";
@@ -114,16 +115,18 @@ export const MatchmakingModal = ({
         }
     };
 
-    const primaryColor = "#14F195";
+    const primaryColor = "#9945FF";
     const accentColor = "#9945FF";
 
     return (
-        <Modal visible={isOpen} transparent animationType="fade">
+        <Modal visible={isOpen} transparent animationType="fade" onRequestClose={onClose}>
             <GestureHandlerRootView style={{ flex: 1 }}>
-
-                <View className="flex-1 justify-center items-center bg-[#0a0a10]/80 p-4">
+                <Pressable className="flex-1 justify-center items-center bg-[#0a0a10]/80 p-4" onPress={onClose}>
                     {/* Modal Container */}
-                    <View className="w-full max-w-sm bg-[#2C2F48] border-4 border-[#12121A] rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                    <Pressable
+                        className="w-full max-w-sm bg-[#2C2F48] border-4 border-[#12121A] rounded-3xl p-6 shadow-xl relative overflow-hidden"
+                        onPress={(e) => e.stopPropagation()}
+                    >
                         {/* Background Glow */}
                         <View
                             className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-20 pointer-events-none"
@@ -133,7 +136,7 @@ export const MatchmakingModal = ({
                         {step === "select" && (
                             <TouchableOpacity
                                 onPress={onClose}
-                                className="absolute top-4 right-4 z-10 w-8 h-8 bg-[#161623] border-2 border-[#12121A] rounded-full flex items-center justify-center shadow-sm"
+                                className="absolute top-4 right-4 z-50 w-8 h-8 bg-[#161623] border-2 border-[#12121A] rounded-full flex items-center justify-center shadow-sm"
                             >
                                 <X size={16} color="#94a3b8" strokeWidth={3} />
                             </TouchableOpacity>
@@ -174,9 +177,10 @@ export const MatchmakingModal = ({
                                     >
                                         <View className="items-center gap-2">
                                             <View className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border-2 border-white/10 mb-1">
-                                                <Coins
-                                                    size={20}
-                                                    color={currency === "SOL" ? primaryColor : "#94a3b8"}
+                                                <Image
+                                                    source={SolanaIcon}
+                                                    style={{ width: 24, height: 24, opacity: currency === "SOL" ? 1 : 0.5 }}
+                                                    resizeMode="contain"
                                                 />
                                             </View>
                                             <Text className="w-full text-center font-black text-white text-lg leading-none">
@@ -271,8 +275,8 @@ export const MatchmakingModal = ({
                                 </View>
                             </View>
                         )}
-                    </View>
-                </View>
+                    </Pressable>
+                </Pressable>
             </GestureHandlerRootView>
         </Modal>
     );

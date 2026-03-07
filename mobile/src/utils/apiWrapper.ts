@@ -33,15 +33,28 @@ export async function withApiErrorHandler<T>(
       } else if (typeof showErrorToastOrMessage !== "string") {
         const status = error.response?.status;
         if (status === 500)
-          errorMessage = `The ItsU servers are currently struggling.`;
-        if (status === 404) errorMessage = `Resource not found.`;
+          errorMessage = ERROR_MESSAGES["INTERNAL_SERVER_ERROR"];
+        else if (status === 404) errorMessage = `Resource not found.`;
+        else if (
+          error.code === "ECONNABORTED" ||
+          error.message.includes("timeout")
+        ) {
+          errorMessage = ERROR_MESSAGES["TIMEOUT_ERROR"];
+        } else if (
+          error.code === "ERR_NETWORK" ||
+          error.message === "Network Error"
+        ) {
+          errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
+        }
       }
 
-      console.log(`[API Wrapper] failed with code ${serverErrorCode}`);
+      console.log(
+        `[API Wrapper] failed with code ${serverErrorCode || error.code}`,
+      );
     } else {
       console.log(`[API Wrapper] NON_HTTP ERROR`, error);
       if (typeof showErrorToastOrMessage !== "string") {
-        errorMessage = "Network error. Check you connection.";
+        errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
       }
     }
 

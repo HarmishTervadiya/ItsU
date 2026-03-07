@@ -272,6 +272,7 @@ export default function GameHomeScreen() {
                 isOpen={showReportModal}
                 onClose={() => setShowReportModal(false)}
             />
+            
         </SafeAreaView >
     );
 }

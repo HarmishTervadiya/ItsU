@@ -13,6 +13,7 @@ import {
 import bs58 from "bs58";
 import { setItem } from "../utils/secureStore";
 import { Toast } from "toastify-react-native";
+import { ERROR_MESSAGES } from "../constants/errors";
 import { getNonceApi } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
 
@@ -99,7 +100,20 @@ export const useWallet = () => {
       console.log("Login successful!");
     } catch (error: any) {
       console.error("Connect wallet failed:", error.message);
-      Toast.error("Something went wrong");
+
+      let errorMessage = "Something went wrong";
+    
+      if (
+        error.message?.includes("User cancel") ||
+        error.message?.includes("Authorization failed") ||
+        error.message?.includes("User declined")
+      ) {
+        errorMessage = ERROR_MESSAGES["USER_REJECTED_WALLET"];
+      } else if (error.message?.includes("Network request failed")) {
+        errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
+      }
+
+      Toast.error(errorMessage);
     } finally {
       setConnecting(false);
     }
@@ -205,6 +219,24 @@ export const useWallet = () => {
         return signature;
       } catch (error: any) {
         console.error("Error while sending sol:", error);
+
+        let errorMessage = "Failed to send transaction";
+        if (
+          error.message?.includes("User cancel") ||
+          error.message?.includes("Authorization failed") ||
+          error.message?.includes("User declined")
+        ) {
+          errorMessage = ERROR_MESSAGES["USER_REJECTED_WALLET"];
+        } else if (error.message?.includes("Network request failed")) {
+          errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
+        } else if (
+          error.message?.includes("insufficient lamports") ||
+          error.message?.includes("InsufficientFunds")
+        ) {
+          errorMessage = ERROR_MESSAGES["INSUFFICIENT_FUNDS"];
+        }
+
+        Toast.error(errorMessage);
         throw error;
       } finally {
         setSending(false);

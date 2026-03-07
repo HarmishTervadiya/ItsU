@@ -12,7 +12,10 @@ export type ErrorCode =
   | "INVALID_TRANSACTION"
   | "BAD_REQUEST"
   | "NO_ACTIVE_ITEMS"
-  | "UNKNOWN_ERROR";
+  | "UNKNOWN_ERROR"
+  | "NETWORK_ERROR"
+  | "TIMEOUT_ERROR"
+  | "USER_REJECTED_WALLET";
 
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   INVALID_ACCESS_TOKEN: "Your session has expired. Please sign in again.",
@@ -30,4 +33,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   BAD_REQUEST: "Something is wrong with your request.",
   NO_ACTIVE_ITEMS: "No active games available at the moment.",
   UNKNOWN_ERROR: "An unexpected error occurred in the arena.",
+  NETWORK_ERROR: "Network error. Please check your internet connection.",
+  TIMEOUT_ERROR: "The request took too long. Please try again.",
+  USER_REJECTED_WALLET: "Transaction cancelled by user.",
 };
