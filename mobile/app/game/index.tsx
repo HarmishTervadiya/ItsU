@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { createPracticeGameApi } from "@/src/api/game";
 import { Toast } from "toastify-react-native";
 import ConfirmationModal from "@/src/components/ConfirmationModal";
+import ReportModal from "@/src/components/ReportModal";
 
 export default function GameHomeScreen() {
     const { user, logout } = useAuthStore();
@@ -19,6 +20,7 @@ export default function GameHomeScreen() {
     const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
     const [isPracticeLoading, setIsPracticeLoading] = React.useState(false);
     const [isMatchmakingLoading, setIsMatchmakingLoading] = React.useState(false);
+    const [showReportModal, setShowReportModal] = React.useState(false);
 
     const onStartGame = () => {
         setIsMatchmakingLoading(true);
@@ -203,7 +205,7 @@ export default function GameHomeScreen() {
                     </TouchableOpacity>
 
                     <View className="w-full mt-2">
-                        <GameButton variant="primary" icon={<Siren size={24} color="white" />} onPress={() => console.log('Report issue')}>
+                        <GameButton variant="primary" icon={<Siren size={24} color="white" />} onPress={() => setShowReportModal(true)}>
                             REPORT ISSUE
                         </GameButton>
                     </View>
@@ -231,6 +233,10 @@ export default function GameHomeScreen() {
                 message="Are you sure you want to log out of your session?"
                 confirmText="Logout"
                 type="danger"
+            />
+            <ReportModal
+                isOpen={showReportModal}
+                onClose={() => setShowReportModal(false)}
             />
         </SafeAreaView >
     );

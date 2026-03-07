@@ -7,6 +7,7 @@ import {
   pushToGameQueueTest,
   createPracticeGame,
   getActiveGame,
+  getUserGameHistory,
 } from "../controllers/games.controller";
 
 const router = Router();
@@ -25,5 +26,7 @@ router
 // router.route("/queue/join-test").post(verifyJwt, pushToGameQueueTest);
 
 router.route("/practice").post(verifyJwt, createPracticeGame);
+
+router.route("/history").get(verifyJwt, getUserGameHistory);
 
 export default router;

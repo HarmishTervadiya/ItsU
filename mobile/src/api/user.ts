@@ -20,3 +20,22 @@ export const updateUserDataApi = (data: UpdateUserDataPayload) => {
     apiClient.patch("/user/", data),
   );
 };
+
+export interface ReportIssuePayload {
+  description: string;
+}
+
+export interface ReportIssueResponse {
+  id: string;
+  userId: string;
+  description: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const reportIssueApi = (data: ReportIssuePayload) => {
+  return withApiErrorHandler<ReportIssueResponse>(() =>
+    apiClient.post("/user/report", data),
+  );
+};

@@ -72,6 +72,7 @@ model User {
 
   gamesPlayed  GamePlayer[]
   transactions Transaction[]
+  reports      Report[]
 
   refreshToken String?
   status       AccountStatus @default(ACTIVE)
@@ -162,4 +163,15 @@ model Transaction {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  userId      String
+  description String
+  status      String   @default("OPEN") // e.g., OPEN, IN_PROGRESS, RESOLVED
+
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
