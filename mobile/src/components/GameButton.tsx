@@ -73,8 +73,9 @@ export const GameButton = ({
       >
         <Animated.View
           className={`
-            flex-row items-center justify-center gap-3
+            flex-row items-center justify-center
             rounded-2xl px-6 py-4
+            ${fullWidth ? "w-full" : ""}
             ${bgColorClass}
             ${borderColorClass}
             ${disabled || loading ? "opacity-60" : ""}
@@ -86,7 +87,10 @@ export const GameButton = ({
           ) : (
             icon && <View>{icon}</View>
           )}
-          <Text className="text-white uppercase tracking-wider text-lg font-bold">
+          <Text
+            numberOfLines={1}
+            className={`${loading || icon ? "ml-3" : ""} text-white uppercase tracking-wider text-lg font-bold`}
+          >
             {children}
           </Text>
         </Animated.View>

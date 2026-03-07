@@ -109,8 +109,24 @@ export const MatchmakingModal = ({
             connectToLobby(user.id);
             setStep("finding");
         } catch (err: any) {
-            console.error("[MatchmakingModal] Staking error:", err);
-            Toast.error(err.message || "Something went wrong");
+            console.error("[MatchmakingModal] Staking error raw:", err);
+            const errorStr =
+                err?.message || err?.code || JSON.stringify(err) || "unknown";
+
+            console.log("[MatchmakingModal] Staking error stringified:", errorStr);
+
+            if (
+                String(errorStr).includes("User cancel") ||
+                String(errorStr).includes("Authorization failed") ||
+                String(errorStr).includes("User declined") ||
+                String(errorStr).includes("-1") ||
+                String(errorStr).includes("authorization request failed") ||
+                String(errorStr).includes("-32602")
+            ) {
+                Toast.error("Wallet request rejected");
+            } else {
+                Toast.error(err.message || "Something went wrong");
+            }
         } finally {
             setLoading(false);
         }

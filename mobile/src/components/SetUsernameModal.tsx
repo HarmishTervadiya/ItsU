@@ -40,6 +40,7 @@ const toastConfig = {
             style={{ ...TOAST_CONTAINER, borderLeftColor: "#8B5CF6", borderLeftWidth: 5 }}
             text1Style={TEXT1_STYLE}
             text2Style={TEXT2_STYLE}
+            textColor="#fff"
             contentContainerStyle={{ paddingHorizontal: 16 }}
             showCloseIcon={false}
             showProgressBar={false}

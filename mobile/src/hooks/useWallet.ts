@@ -20,7 +20,8 @@ import { useAuthStore } from "../stores/authStore";
 const APP_IDENTITY = {
   name: "ItsU",
   uri: "itsu://",
-  asset: "favicon.png",
+  asset:
+    "https://res.cloudinary.com/dladliuub/image/upload/v1772905336/play_store_512_oiisk8.png",
 };
 
 export const useWallet = () => {
@@ -107,14 +108,22 @@ export const useWallet = () => {
 
       let errorMessage = "Something went wrong";
 
+      const errorStr =
+        error?.message || error?.code || JSON.stringify(error) || "unknown";
+
       if (
-        error.message?.includes("User cancel") ||
-        error.message?.includes("Authorization failed") ||
-        error.message?.includes("User declined")
+        String(errorStr).includes("User cancel") ||
+        String(errorStr).includes("Authorization failed") ||
+        String(errorStr).includes("User declined") ||
+        String(errorStr).includes("-1") ||
+        String(errorStr).includes("authorization request failed")
       ) {
         errorMessage = ERROR_MESSAGES["USER_REJECTED_WALLET"];
-      } else if (error.message?.includes("Network request failed")) {
+      } else if (errorStr.includes("Network request failed")) {
         errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
+      } else {
+        // Fallback: don't show the literal "-1" or raw error to the user if we failed to parse it,
+        // default to "Something went wrong" since we initialized it
       }
 
       Toast.error(errorMessage);
@@ -225,19 +234,28 @@ export const useWallet = () => {
         console.error("Error while sending sol:", error);
 
         let errorMessage = "Failed to send transaction";
+        const errorStr =
+          error?.message || error?.code || JSON.stringify(error) || "unknown";
+
         if (
-          error.message?.includes("User cancel") ||
-          error.message?.includes("Authorization failed") ||
-          error.message?.includes("User declined")
+          String(errorStr).includes("User cancel") ||
+          String(errorStr).includes("Authorization failed") ||
+          String(errorStr).includes("User declined") ||
+          String(errorStr).includes("-1") ||
+          String(errorStr).includes("authorization request failed") ||
+          String(errorStr).includes("-32602")
         ) {
           errorMessage = ERROR_MESSAGES["USER_REJECTED_WALLET"];
-        } else if (error.message?.includes("Network request failed")) {
+        } else if (errorStr.includes("Network request failed")) {
           errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
         } else if (
-          error.message?.includes("insufficient lamports") ||
-          error.message?.includes("InsufficientFunds")
+          errorStr.includes("insufficient lamports") ||
+          errorStr.includes("InsufficientFunds")
         ) {
           errorMessage = ERROR_MESSAGES["INSUFFICIENT_FUNDS"];
+        } else {
+          // If we couldn't match the error, make sure we only display a safe string
+          errorMessage = "Failed to send transaction";
         }
 
         Toast.error(errorMessage);
