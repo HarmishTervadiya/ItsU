@@ -21,6 +21,18 @@ export const updateUserDataApi = (data: UpdateUserDataPayload) => {
   );
 };
 
+export interface UserStatsResponse {
+  totalWins: number;
+  totalSolWon: string;
+}
+
+export const getUserStatsApi = () => {
+  return withApiErrorHandler<UserStatsResponse>(
+    () => apiClient.get("/user/stats"),
+    "Could not load your stats right now. We'll keep trying.",
+  );
+};
+
 export interface ReportIssuePayload {
   description: string;
 }

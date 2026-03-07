@@ -12,6 +12,9 @@ import { createPracticeGameApi } from "@/src/api/game";
 import { Toast } from "toastify-react-native";
 import ConfirmationModal from "@/src/components/ConfirmationModal";
 import ReportModal from "@/src/components/ReportModal";
+import { getUserStatsApi } from "@/src/api/user";
+import { useFocusEffect } from "@react-navigation/native";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 export default function GameHomeScreen() {
     const { user, logout } = useAuthStore();
@@ -21,6 +24,20 @@ export default function GameHomeScreen() {
     const [isPracticeLoading, setIsPracticeLoading] = React.useState(false);
     const [isMatchmakingLoading, setIsMatchmakingLoading] = React.useState(false);
     const [showReportModal, setShowReportModal] = React.useState(false);
+    const [stats, setStats] = React.useState({ wins: 0, balance: "0.00" });
+
+    useFocusEffect(
+        React.useCallback(() => {
+            const fetchStats = async () => {
+                const { data, success } = await getUserStatsApi();
+                if (success && data) {
+                    const balanceSol = (Number(data.totalSolWon) / LAMPORTS_PER_SOL).toFixed(2);
+                    setStats({ wins: data.totalWins, balance: balanceSol });
+                }
+            };
+            fetchStats();
+        }, [])
+    );
 
     const onStartGame = () => {
         setIsMatchmakingLoading(true);
@@ -128,7 +145,7 @@ export default function GameHomeScreen() {
                         </View>
                         <View className="flex-1">
                             <Text className="w-full text-[10px] font-black text-slate-400 uppercase">Wins</Text>
-                            <Text className="w-full text-xl font-black text-white">42</Text>
+                            <Text className="w-full text-xl font-black text-white">{stats.wins}</Text>
                         </View>
                     </View>
 
@@ -138,8 +155,8 @@ export default function GameHomeScreen() {
                             <Wallet size={20} color="white" />
                         </View>
                         <View className="flex-1">
-                            <Text className="w-full text-[10px] font-black text-slate-400 uppercase">Balance</Text>
-                            <Text className="w-full text-xl font-black text-white">14 SOL</Text>
+                            <Text className="w-full text-[10px] font-black text-slate-400 uppercase">Total Won</Text>
+                            <Text className="w-full text-xl font-black text-white">{stats.balance} SOL</Text>
                         </View>
                     </View>
                 </View>
@@ -169,7 +186,9 @@ export default function GameHomeScreen() {
                     </TouchableOpacity>
 
                     {/* History Panel */}
-                    <TouchableOpacity className="w-[48%] bg-panel border-4 border-[#12121A] rounded-3xl p-4 items-start shadow-[4px_4px_0_0_black]">
+                    <TouchableOpacity
+                        onPress={() => router.push('/game/history')}
+                        className="w-[48%] bg-panel border-4 border-[#12121A] rounded-3xl p-4 items-start shadow-[4px_4px_0_0_black]">
                         <History size={32} className="text-accent mb-2" color={"#E879F9"} strokeWidth={3} />
                         <Text className="w-full font-black text-white text-lg mt-1">History</Text>
                         <Text className="w-full text-xs font-bold text-slate-400 mt-1">Past kills</Text>

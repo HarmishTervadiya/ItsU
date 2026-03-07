@@ -38,3 +38,25 @@ export const getActiveGameApi = () => {
     apiClient.get("/games/active"),
   );
 };
+
+export interface GameHistoryItem {
+  gameId: string;
+  role: string;
+  isDead: boolean;
+  roundsSurvived: number;
+  winnings: string;
+  Currency: string;
+  potAmount: string;
+  totalRounds: number;
+  winnerRole: string | null;
+  startTime: string;
+  endTime: string | null;
+}
+
+export const getGameHistoryApi = () => {
+  // Use a fallback error message as requested by the user
+  return withApiErrorHandler<GameHistoryItem[]>(
+    () => apiClient.get("/games/history"),
+    "Could not load your game history right now. Please try again later.",
+  );
+};
