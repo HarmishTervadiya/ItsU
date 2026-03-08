@@ -237,7 +237,7 @@ export default function GameScreen() {
                     style={{ opacity: fullScreenFlashAnim }}
                 >
                     {recentlyKilled && (
-                        <View className="items-center mt-[-60px]">
+                        <View className="w-full items-center mt-[-60px]">
                             <View className="w-24 h-24 rounded-full border-4 border-[#12121A] items-center justify-center shadow-lg" style={{ backgroundColor: recentlyKilled.color || '#450a0a' }}>
                                 <Skull size={48} color="#12121A" />
                             </View>

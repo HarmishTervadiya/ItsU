@@ -25,7 +25,7 @@ export const RevealPhase: React.FC<RevealPhaseProps> = ({ myPlayer }) => {
             </Text>
 
             <View className="mt-6 bg-panel border-2 border-[#12121A] p-4 rounded-2xl max-w-[85%] items-center">
-                <Text className="text-sm font-bold text-white text-center leading-5">
+                <Text className="text-xl font-bold text-white text-center leading-5">
                     {isWolf
                         ? `🐺 Hunt the citizens.\nYour clue: "${game?.hint}"`
                         : `🛡️ Find the Wolf.\nThe secret item: "${game?.item}"`

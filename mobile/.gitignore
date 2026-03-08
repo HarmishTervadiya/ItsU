@@ -45,3 +45,6 @@ android
 .env
 
 docs
+
+release.keystore
+gradle.properties

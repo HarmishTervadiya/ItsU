@@ -26,8 +26,8 @@ export const NightPhase: React.FC<NightPhaseProps> = ({ alivePlayers, myPlayer }
             {/* Night Title */}
             <View className="absolute top-[50%] left-0 right-0 items-center" pointerEvents="none">
                 <EyeOff size={48} color="#6D28D9" />
-                <Text className="text-2xl font-black text-primary uppercase tracking-widest mt-2">Night</Text>
-                <Text className="text-slate-500 text-xs font-bold mt-1">
+                <Text className="w-full text-center text-3xl font-black text-primary uppercase tracking-widest mt-2">Night</Text>
+                <Text className="text-slate-500 text-lg font-bold mt-1">
                     {myPlayer?.role === 'WOLF' ? 'Choose your target...' : 'The wolf is hunting...'}
                 </Text>
             </View>
