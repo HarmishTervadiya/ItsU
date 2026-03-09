@@ -19,9 +19,8 @@ import { useAuthStore } from "../stores/authStore";
 
 const APP_IDENTITY = {
   name: "ItsU",
-  uri: "itsu://",
-  asset:
-    "https://res.cloudinary.com/dladliuub/image/upload/v1772905336/play_store_512_oiisk8.png",
+  uri: "https://its-u-web.vercel.app",
+  icon: "images/logo.png",
 };
 
 export const useWallet = () => {
