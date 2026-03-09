@@ -26,9 +26,9 @@ A social deduction mobile game powered by AI-driven bots. Players are assigned s
 
 Key highlights:
 
-- **AI Bots** powered by Groq's LLaMA model chat, vote, and make kill decisions autonomously.
+- **AI Bots** powered by Groq's LLaMA and Gemini 2.5-flash model chat, vote, and make kill decisions autonomously.
 - **Matchmaking** automatically fills lobbies and starts games.
-- **Solana Integration** via the `anchor` package for on-chain staking features.
+- **Solana Integration** via `solana/web3.js` for secure staking transactions.
 - **Monorepo** structure managed by Turborepo and Bun workspaces for fast, parallel builds.
 
 ---
@@ -43,7 +43,7 @@ ItsU (monorepo)
 └── anchor/     — Solana on-chain program integration
 ```
 
-The backend handles all game logic in-memory via a `GameStore`, coordinates matchmaking via a `MatchMaker` worker, and delegates AI decisions (chat, vote, kill) to the `BotEngine` which calls Groq's API.
+The backend handles all game logic in-memory via a `GameStore`, coordinates matchmaking via a `MatchMaker` worker, and delegates AI decisions (chat, vote, kill) to the `BotEngine` which calls Groq's API. Payout processing is currently handled server-side to ensure speed and flexibility, with an on-chain escrow system planned for a future update.
 
 ---
 
@@ -59,7 +59,7 @@ The backend handles all game logic in-memory via a `GameStore`, coordinates matc
 | Mobile     | [React Native](https://reactnative.dev) + [Expo](https://expo.dev) (SDK 54)            |
 | Styling    | [NativeWind](https://www.nativewind.dev) (Tailwind CSS for RN)                         |
 | Navigation | [Expo Router](https://expo.github.io/router) (file-based routing)                      |
-| Blockchain | [Solana Web3.js](https://solana-labs.github.io/solana-web3.js) + Mobile Wallet Adapter |
+| Blockchain | [Solana Web3.js](https://solana-labs.github.io/solana-web3.js) + Server-side Payouts |
 | Logging    | [Pino](https://getpino.io)                                                             |
 | Language   | TypeScript throughout                                                                  |
 
@@ -103,7 +103,7 @@ Shared TypeScript types (e.g. `GameState`, player roles) consumed by both `backe
 
 ### `anchor/`
 
-Solana program integration entry point.
+Solana on-chain program (planned for escrow phase).
 
 ---
 
@@ -153,6 +153,8 @@ cp backend/.env.example backend/.env
 | `JWT_REFRESH_SECRET` | Secret for signing JWT refresh tokens    |
 | `DATABASE_URL`       | PostgreSQL connection string for Prisma  |
 | `GROQ_API_KEY`       | Your Groq API key for AI bot generation  |
+| `GEMINI_API_KEY`     | Your Gemini API key for AI bot generation |
+| `SARVAM_API_KEY`     | Your Sarvam API key for AI bot generation |
 
 #### Mobile (`mobile/.env`)
 
@@ -248,9 +250,14 @@ bunx prisma migrate dev
 bunx prisma generate
 ```
 
-### 6. Get a Groq API Key
+### 6. Get AI API Keys
 
-Sign up at [console.groq.com](https://console.groq.com), create a free API key, and set it as `GROQ_API_KEY` in `backend/.env`. This is required for the AI bot engine to function.
+ItsU uses multiple AI providers to power its bots:
+- **Groq**: Sign up at [console.groq.com](https://console.groq.com).
+- **Gemini**: Get your key from [Google AI Studio](https://aistudio.google.com/).
+- **Sarvam**: Get your key from [Sarvam AI](https://sarvam.ai).
+
+Set these keys in `backend/.env`. These are required for the AI bot engine to function.
 
 ### 7. Run the Project
 
@@ -288,6 +295,16 @@ All scripts below can be run from the **root** of the monorepo:
 | Type Check  | `bun type-check` | TypeScript type-check all workspaces               |
 | Backend     | `bun server`     | Start the backend server with hot-reload           |
 | Mobile      | `bun app`        | Build and run the mobile app on Android            |
+ 
+ ---
+ 
+ ## 🚀 Next Phase (Staking 2.0)
+ 
+ While the current version uses secure server-side logic for game results and payouts, the next major update will integrate the **Anchor Escrow Program**:
+ 
+ - **On-Chain Escrows**: Funds will be held by a smart contract during the game.
+ - **Permissionless Payouts**: Winners will be able to claim their pot directly from the contract.
+ - **Verifiable Fairness**: Game outcomes and pot distribution will be cryptographically provable on-chain.
 
 ---
 
