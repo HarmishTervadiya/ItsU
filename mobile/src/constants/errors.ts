@@ -37,3 +37,17 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   TIMEOUT_ERROR: "The request took too long. Please try again.",
   USER_REJECTED_WALLET: "Transaction cancelled by user.",
 };
+
+// --- Wallet rejection errors ---
+/**
+ * Error strings or codes returned by Solana Mobile Wallet Adapter
+ * when a user rejects or cancels a request.
+ */
+export const WALLET_REJECTION_ERRORS = [
+  "User cancel",
+  "Authorization failed",
+  "User declined",
+  "authorization request failed",
+  "-1",
+  "-32602",
+];

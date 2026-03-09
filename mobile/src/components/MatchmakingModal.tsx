@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, TouchableOpacity, Modal, Pressable, Image } from "react-native";
 import { X, Play, Zap, ShieldAlert, Crosshair } from "lucide-react-native";
 import SolanaIcon from "@/src/assets/images/icons/solana-icon.png";
+import SeekerIcon from "@/src/assets/images/icons/seeker-logo.png";
+import { ERROR_MESSAGES, WALLET_REJECTION_ERRORS } from "../constants/errors";
 import { Toast } from "toastify-react-native";
 import { GameButton } from "./GameButton";
 import { joinQueueApi } from "../api/game";
@@ -12,7 +14,7 @@ import { useGameStore } from "@/src/stores/gameStore";
 import { useWallet } from "../hooks/useWallet";
 import { Keypair } from "@solana/web3.js";
 import { config } from "../config";
-import { STAKE_AMOUNT_SOL, STAKE_AMOUNT_LAMPORTS, STAKE_AMOUNT_SKR, STAKE_DISPLAY } from "../constants";
+import { STAKE_AMOUNT_SOL, STAKE_AMOUNT_LAMPORTS, STAKE_AMOUNT_SKR, STAKE_DISPLAY, STAKE_AMOUNT_SKR_RAW, StakeCurrency } from "../constants";
 
 interface MatchmakingModalProps {
     isOpen: boolean;
@@ -27,9 +29,9 @@ export const MatchmakingModal = ({
 }: MatchmakingModalProps) => {
     const { user } = useAuthStore();
     const { lobbySocket, connectToLobby } = useGameStore();
-    const { sendSOL } = useWallet();
+    const { sendSOL, sendSKR } = useWallet();
     const [step, setStep] = useState<"select" | "finding">("select");
-    const [currency, setCurrency] = useState<"SOL" | "SKR">("SOL");
+    const [currency, setCurrency] = useState<StakeCurrency>("SOL");
     const [loading, setLoading] = useState(false);
 
     // Reset state when opened
@@ -70,7 +72,7 @@ export const MatchmakingModal = ({
             // Step 1: Generate reference key for server-side verification
             const reference = Keypair.generate();
             const stakeAmount = currency === "SOL" ? STAKE_AMOUNT_SOL : STAKE_AMOUNT_SKR;
-            const lamports = currency === "SOL" ? STAKE_AMOUNT_LAMPORTS : STAKE_AMOUNT_SKR;
+            const lamports = currency === "SOL" ? STAKE_AMOUNT_LAMPORTS : STAKE_AMOUNT_SKR_RAW;
 
             // Step 2: Record intent in DB
             console.log("[MatchmakingModal] Recording stake intent...");
@@ -84,13 +86,23 @@ export const MatchmakingModal = ({
                 throw new Error(recordError || "Failed to initiate stake transaction");
             }
 
-            // Step 3: Send SOL with reference
-            console.log("[MatchmakingModal] Sending SOL...");
-            const signature = await sendSOL(
-                config.ITSU_MAIN_WALLET,
-                stakeAmount,
-                reference.publicKey
-            );
+            // Step 3: Send SOL or SKR with reference
+            console.log(`[MatchmakingModal] Sending ${currency}...`);
+            let signature: string | null = null;
+            
+            if (currency === "SOL") {
+                signature = await sendSOL(
+                    config.ITSU_MAIN_WALLET,
+                    stakeAmount,
+                    reference.publicKey
+                );
+            } else {
+                signature = await sendSKR(
+                    config.ITSU_MAIN_WALLET,
+                    stakeAmount,
+                    reference.publicKey
+                );
+            }
 
             if (!signature) {
                 throw new Error("Transaction cancelled or failed");
@@ -116,12 +128,7 @@ export const MatchmakingModal = ({
             console.log("[MatchmakingModal] Staking error stringified:", errorStr);
 
             if (
-                String(errorStr).includes("User cancel") ||
-                String(errorStr).includes("Authorization failed") ||
-                String(errorStr).includes("User declined") ||
-                String(errorStr).includes("-1") ||
-                String(errorStr).includes("authorization request failed") ||
-                String(errorStr).includes("-32602")
+                WALLET_REJECTION_ERRORS.some((msg) => String(errorStr).includes(msg))
             ) {
                 Toast.error("Wallet request rejected");
             } else {
@@ -207,24 +214,39 @@ export const MatchmakingModal = ({
                                     </TouchableOpacity>
 
                                     {/* SKR Option */}
-                                    <View
-                                        className={`flex-1 p-4 rounded-2xl border-4 items-center justify-center transition-all bg-[#161623] border-[#12121A] opacity-50 relative`}
+                                    <TouchableOpacity
+                                        onPress={() => setCurrency("SKR")}
+                                        activeOpacity={0.8}
+                                        className={`flex-1 p-4 rounded-2xl border-4 items-center justify-center transition-all ${currency === "SKR"
+                                            ? "bg-[#323552]"
+                                            : "bg-[#161623] border-[#12121A]"
+                                            }`}
+                                        style={
+                                            currency === "SKR"
+                                                ? {
+                                                    borderColor: primaryColor,
+                                                    shadowColor: "#059669",
+                                                    shadowOffset: { width: 0, height: 4 },
+                                                    shadowOpacity: 1,
+                                                    shadowRadius: 0,
+                                                    elevation: 4,
+                                                }
+                                                : {}
+                                        }
                                     >
-                                        <View className="absolute top-1 bg-accent/20 px-2 py-0.5 rounded-full border border-accent/50 z-10">
-                                            <Text className="text-[8px] font-black text-white uppercase tracking-wider">Coming Soon</Text>
-                                        </View>
-                                        <View className="items-center gap-2 mt-2">
+                                        <View className="items-center gap-2">
                                             <View className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border-2 border-white/10 mb-1">
-                                                <Zap
-                                                    size={20}
-                                                    color={"#94a3b8"}
+                                                <Image
+                                                    source={SeekerIcon}
+                                                    style={{ width: 24, height: 24, opacity: currency === "SKR" ? 1 : 0.5 }}
+                                                    resizeMode="contain"
                                                 />
                                             </View>
-                                            <Text className="w-full text-center font-black text-slate-500 text-lg leading-none">
+                                            <Text className="w-full text-center font-black text-white text-lg leading-none">
                                                 {STAKE_DISPLAY.SKR}
                                             </Text>
                                         </View>
-                                    </View>
+                                    </TouchableOpacity>
                                 </View>
 
                                 <View className="bg-red-500/10 border-2 border-red-500/30 rounded-xl p-3 flex-row gap-2 mt-2">

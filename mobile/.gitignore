@@ -48,3 +48,5 @@ docs
 
 release.keystore
 gradle.properties
+
+publish-dapp.ps1

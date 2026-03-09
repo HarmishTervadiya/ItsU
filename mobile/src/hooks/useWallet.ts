@@ -13,9 +13,18 @@ import {
 import bs58 from "bs58";
 import { setItem } from "../utils/secureStore";
 import { Toast } from "toastify-react-native";
-import { ERROR_MESSAGES } from "../constants/errors";
+import { ERROR_MESSAGES, WALLET_REJECTION_ERRORS } from "../constants/errors";
 import { getNonceApi } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
+import { 
+  getAssociatedTokenAddress, 
+  createTransferInstruction, 
+  createAssociatedTokenAccountInstruction,
+  getAccount,
+  TokenAccountNotFoundError,
+  TokenInvalidAccountOwnerError
+} from "@solana/spl-token";
+import { SKR_MINT, SKR_DECIMALS } from "../constants";
 
 const APP_IDENTITY = {
   name: "ItsU",
@@ -111,11 +120,7 @@ export const useWallet = () => {
         error?.message || error?.code || JSON.stringify(error) || "unknown";
 
       if (
-        String(errorStr).includes("User cancel") ||
-        String(errorStr).includes("Authorization failed") ||
-        String(errorStr).includes("User declined") ||
-        String(errorStr).includes("-1") ||
-        String(errorStr).includes("authorization request failed")
+        WALLET_REJECTION_ERRORS.some((msg) => String(errorStr).includes(msg))
       ) {
         errorMessage = ERROR_MESSAGES["USER_REJECTED_WALLET"];
       } else if (errorStr.includes("Network request failed")) {
@@ -237,12 +242,7 @@ export const useWallet = () => {
           error?.message || error?.code || JSON.stringify(error) || "unknown";
 
         if (
-          String(errorStr).includes("User cancel") ||
-          String(errorStr).includes("Authorization failed") ||
-          String(errorStr).includes("User declined") ||
-          String(errorStr).includes("-1") ||
-          String(errorStr).includes("authorization request failed") ||
-          String(errorStr).includes("-32602")
+          WALLET_REJECTION_ERRORS.some((msg) => String(errorStr).includes(msg))
         ) {
           errorMessage = ERROR_MESSAGES["USER_REJECTED_WALLET"];
         } else if (errorStr.includes("Network request failed")) {
@@ -266,6 +266,157 @@ export const useWallet = () => {
     [publicKey, connection, cluster],
   );
 
+  const sendSKR = useCallback(
+    async (toAddress: string, amountSKR: number, reference?: PublicKey) => {
+      console.log("[useWallet] sendSKR() called");
+      console.log("[useWallet] to:", toAddress, "amount:", amountSKR);
+
+      if (!publicKey) {
+        throw new Error("Wallet not connected");
+      }
+
+      setSending(true);
+      try {
+        const toPublicKey = new PublicKey(toAddress);
+        const mintPublicKey = new PublicKey(SKR_MINT);
+        
+        const { blockhash, lastValidBlockHeight } =
+          await connection.getLatestBlockhash();
+
+        // Get associated token accounts
+        const fromAta = await getAssociatedTokenAddress(mintPublicKey, publicKey);
+        const toAta = await getAssociatedTokenAddress(mintPublicKey, toPublicKey);
+
+        const transaction = new Transaction();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = publicKey;
+
+        // Check if destination ATA exists, if not add instruction to create it
+        try {
+          await getAccount(connection, toAta);
+        } catch (error: any) {
+          if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
+            transaction.add(
+              createAssociatedTokenAccountInstruction(
+                publicKey,
+                toAta,
+                toPublicKey,
+                mintPublicKey
+              )
+            );
+          } else {
+            throw error;
+          }
+        }
+
+        const amount = BigInt(Math.round(amountSKR * Math.pow(10, SKR_DECIMALS)));
+        const transferInstruction = createTransferInstruction(
+          fromAta,
+          toAta,
+          publicKey,
+          amount
+        );
+
+        if (reference) {
+          transferInstruction.keys.push({
+            pubkey: reference,
+            isSigner: false,
+            isWritable: false,
+          });
+        }
+
+        transaction.add(transferInstruction);
+
+        const signedTransaction = await transact(
+          async (wallet: Web3MobileWallet) => {
+            await wallet.authorize({
+              chain: `solana:${cluster}`,
+              identity: APP_IDENTITY,
+            });
+
+            const signedTxs = await wallet.signTransactions({
+              transactions: [transaction],
+            });
+
+            if (!signedTxs || signedTxs.length === 0) {
+              throw new Error("No signed transaction returned from wallet");
+            }
+
+            return signedTxs[0];
+          },
+        );
+
+        // Required delay for MWA networking context restoration
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        const rawTransaction = signedTransaction.serialize();
+        let signature: string | null = null;
+        let lastError: Error | null = null;
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            console.log(`[useWallet] send attempt ${attempt}...`);
+            signature = await connection.sendRawTransaction(rawTransaction, {
+              skipPreflight: true,
+              maxRetries: 2,
+            });
+            break;
+          } catch (err: any) {
+            lastError = err;
+            console.log(`[useWallet] attempt ${attempt} failed:`, err.message);
+            if (attempt < 3) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          }
+        }
+
+        if (!signature) {
+          throw new Error(lastError?.message || "Failed to send transaction");
+        }
+
+        console.log("[useWallet] waiting for confirmation...");
+        const confirmation = await connection.confirmTransaction(
+          { signature, blockhash, lastValidBlockHeight },
+          "confirmed",
+        );
+
+        if (confirmation.value.err) {
+          throw new Error("Transaction failed during confirmation");
+        }
+
+        return signature;
+      } catch (error: any) {
+        console.error("Error while sending SKR:", error);
+
+        let errorMessage = "Failed to send transaction";
+        const errorStr =
+          error?.message || error?.code || JSON.stringify(error) || "unknown";
+
+        if (
+          WALLET_REJECTION_ERRORS.some((msg) => String(errorStr).includes(msg))
+        ) {
+          errorMessage = ERROR_MESSAGES["USER_REJECTED_WALLET"];
+        } else if (errorStr.includes("Network request failed")) {
+          errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
+        } else if (
+          errorStr.includes("insufficient lamports") ||
+          errorStr.includes("InsufficientFunds") ||
+          errorStr.includes("insufficient funds")
+        ) {
+          errorMessage = ERROR_MESSAGES["INSUFFICIENT_FUNDS"];
+        } else {
+          errorMessage = "Failed to send transaction";
+        }
+
+        Toast.error(errorMessage);
+        throw error;
+      } finally {
+        setSending(false);
+      }
+    },
+    [publicKey, connection, cluster],
+  );
+
   return {
     publicKey,
     connecting,
@@ -274,5 +425,6 @@ export const useWallet = () => {
     signInWithSolana,
     disconnectWallet,
     sendSOL,
+    sendSKR,
   };
 };
