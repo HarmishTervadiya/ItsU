@@ -7,7 +7,7 @@ import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { logger } from "../utils/logger";
 import { v4 as uuidv4 } from "uuid";
 import { config } from "../config";
-import { STAKE_AMOUNT_LAMPORTS } from "@itsu/shared/src/constants";
+import { STAKE_AMOUNT_LAMPORTS, STAKE_AMOUNT_SKR_RAW } from "@itsu/shared/src/constants";
 
 const BOT_NAMES = [
   "DEGEN",
@@ -44,187 +44,190 @@ export async function matchMaker() {
       take: 50,
       orderBy: { joinedAt: "asc" },
     });
-    const solEntries = entries.filter((e) => e.currency === Currency.SOL);
-
-    let selectedEntries: typeof solEntries = [];
-    let botCount = 0;
-
-    if (solEntries.length >= 6) {
-      logger.debug("[Match Making] 6+ players found, picking 6 randomly");
-      // Shuffle to avoid friends who joined together always matching
-      const shuffled = shuffleArray(solEntries);
-      selectedEntries = shuffled.slice(0, 6);
-      botCount = 0;
-    } else if (solEntries.length > 0) {
-      // Still check the oldest entry for the 60s timeout (entries are ordered by joinedAt asc)
-      const timeElapsed = Date.now() - solEntries[0]!.joinedAt.getTime();
-      if (timeElapsed > 30000) {
-        logger.debug("[Match Making] Timeout reached, adding bot players");
-        selectedEntries = shuffleArray(solEntries);
-        botCount = 6 - selectedEntries.length;
-      }
-    }
-
-    if (selectedEntries.length === 0) {
-      if (solEntries.length === 0) {
-        // Queue is empty — stop the matchmaker
-        stopMatchMaker();
-      }
-      // Entries exist but < 6 and timeout not reached yet — let the next tick retry
+    if (entries.length === 0) {
+      stopMatchMaker();
       return;
     }
-    logger.debug("[Match Making] Entries found");
 
-    const userIds = selectedEntries.map((e) => e.userId);
-    const itemsCount = await prisma.item.count({ where: { isActive: true } });
-
+    let itemsCount = await prisma.item.count({ where: { isActive: true } });
     if (itemsCount === 0)
       throw new ApiError(500, "NO_ACTIVE_ITEMS", "No active items found");
 
-    const randomItem = await prisma.item.findFirst({
-      where: { isActive: true },
-      skip: Math.floor(Math.random() * itemsCount),
-    });
-    const randomHint =
-      randomItem!.hints[Math.floor(Math.random() * randomItem!.hints.length)];
-    logger.debug("[Match Making] Creating new game");
+    for (const currency of [Currency.SOL, Currency.SKR]) {
+      const currencyEntries = entries.filter((e) => e.currency === currency);
 
-    const result = await prisma.$transaction(async (tx) => {
-      const userTxs = await tx.transaction.findMany({
-        where: {
-          userId: { in: userIds },
-          status: "CONFIRMED",
-          gameId: null,
-        },
-        orderBy: { createdAt: "desc" },
-      });
+      let selectedEntries: typeof currencyEntries = [];
+      let botCount = 0;
 
-      // Deduplicate: get only the latest unassigned transaction per user
-      const userTxMap = new Map();
-      for (const t of userTxs) {
-        if (!userTxMap.has(t.userId)) userTxMap.set(t.userId, t);
-      }
-
-      let calculatedPot = 0n;
-      const txIdsToUpdate: string[] = [];
-
-      for (const userId of userIds) {
-        const t = userTxMap.get(userId);
-        if (t) {
-          calculatedPot += t.amount;
-          txIdsToUpdate.push(t.id);
-        } else {
-          // Fallback for test queues where no transaction exists
-          calculatedPot += STAKE_AMOUNT_LAMPORTS;
+      if (currencyEntries.length >= 6) {
+        logger.debug(`[Match Making ${currency}] 6+ players found, picking 6 randomly`);
+        // Shuffle to avoid friends who joined together always matching
+        const shuffled = shuffleArray(currencyEntries);
+        selectedEntries = shuffled.slice(0, 6);
+        botCount = 0;
+      } else if (currencyEntries.length > 0) {
+        // Still check the oldest entry for the 60s timeout (entries are ordered by joinedAt asc)
+        const timeElapsed = Date.now() - currencyEntries[0]!.joinedAt.getTime();
+        if (timeElapsed > 30000) {
+          logger.debug(`[Match Making ${currency}] Timeout reached, adding bot players`);
+          selectedEntries = shuffleArray(currencyEntries);
+          botCount = 6 - selectedEntries.length;
         }
       }
 
-      const newGame = await tx.game.create({
-        data: {
-          currency: Currency.SOL,
-          hint: randomHint!,
-          itemName: randomItem!.name,
-          potAmount: calculatedPot,
-          timeLimit: 600,
-          status: "ONGOING",
-          itemId: randomItem!.id,
-        },
-      });
-
-      if (txIdsToUpdate.length > 0) {
-        await tx.transaction.updateMany({
-          where: { id: { in: txIdsToUpdate } },
-          data: { gameId: newGame.id },
-        });
+      if (selectedEntries.length === 0) {
+        continue;
       }
+      logger.debug(`[Match Making ${currency}] Entries found`);
 
-      logger.debug("[Match Making] Assigning wolf role");
+      const userIds = selectedEntries.map((e) => e.userId);
 
-      const wolfIndex = Math.floor(Math.random() * 6);
-      const realPlayersData: { gameId: string; userId: string; role: Role }[] =
-        [];
-      const inMemoryPlayers: GameState["players"] = [];
-
-      // Preload user names so we can attach real display names
-      const users = await tx.user.findMany({
-        where: { id: { in: userIds } },
-        select: { id: true, name: true },
+      const randomItem = await prisma.item.findFirst({
+        where: { isActive: true },
+        skip: Math.floor(Math.random() * itemsCount),
       });
-      const userNameMap = new Map(users.map((u) => [u.id, u.name]));
+      const randomHint =
+        randomItem!.hints[Math.floor(Math.random() * randomItem!.hints.length)];
+      logger.debug(`[Match Making ${currency}] Creating new game`);
 
-      for (let i = 0; i < 6; i++) {
-        const assignedRole = i === wolfIndex ? Role.WOLF : Role.CITIZEN;
+      const result = await prisma.$transaction(async (tx) => {
+        const userTxs = await tx.transaction.findMany({
+          where: {
+            userId: { in: userIds },
+            status: "CONFIRMED",
+            gameId: null,
+            currency: currency,
+          },
+          orderBy: { createdAt: "desc" },
+        });
 
-        if (i < selectedEntries.length) {
-          const userId = selectedEntries[i]!.userId;
-          realPlayersData.push({
-            gameId: newGame.id,
-            userId,
-            role: assignedRole,
+        // Deduplicate: get only the latest unassigned transaction per user
+        const userTxMap = new Map();
+        for (const t of userTxs) {
+          if (!userTxMap.has(t.userId)) userTxMap.set(t.userId, t);
+        }
+
+        let calculatedPot = 0n;
+        const txIdsToUpdate: string[] = [];
+
+        for (const userId of userIds) {
+          const t = userTxMap.get(userId);
+          if (t) {
+            calculatedPot += t.amount;
+            txIdsToUpdate.push(t.id);
+          } else {
+            // Fallback for test queues where no transaction exists
+            calculatedPot += currency === Currency.SOL ? STAKE_AMOUNT_LAMPORTS : STAKE_AMOUNT_SKR_RAW;
+          }
+        }
+
+        const newGame = await tx.game.create({
+          data: {
+            currency: currency,
+            hint: randomHint!,
+            itemName: randomItem!.name,
+            potAmount: calculatedPot,
+            timeLimit: 600,
+            status: "ONGOING",
+            itemId: randomItem!.id,
+          },
+        });
+
+        if (txIdsToUpdate.length > 0) {
+          await tx.transaction.updateMany({
+            where: { id: { in: txIdsToUpdate } },
+            data: { gameId: newGame.id },
           });
+        }
 
-          const realName = userNameMap.get(userId) || null;
-          const fallbackName = `PLAYER_${i + 1}`;
+        logger.debug(`[Match Making ${currency}] Assigning wolf role`);
 
-          inMemoryPlayers.push({
-            playerId: userId,
-            role: assignedRole,
-            isDead: false,
-            isBot: false,
-            displayName: realName || fallbackName,
-          });
-        } else {
-          // Bot: Add to Memory ONLY with a random but stable display name
-          const botId = `bot_${uuidv4()}`;
-          const nameIndex =
-            Math.abs(botId.charCodeAt(0) + i) % BOT_NAMES.length;
-          const displayName = BOT_NAMES[nameIndex] || "Bot";
+        const wolfIndex = Math.floor(Math.random() * 6);
+        const realPlayersData: { gameId: string; userId: string; role: Role }[] =
+          [];
+        const inMemoryPlayers: GameState["players"] = [];
 
-          inMemoryPlayers.push({
-            playerId: botId,
-            role: assignedRole,
-            isDead: false,
-            isBot: true,
-            displayName,
+        // Preload user names so we can attach real display names
+        const users = await tx.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, name: true },
+        });
+        const userNameMap = new Map(users.map((u) => [u.id, u.name]));
+
+        for (let i = 0; i < 6; i++) {
+          const assignedRole = i === wolfIndex ? Role.WOLF : Role.CITIZEN;
+
+          if (i < selectedEntries.length) {
+            const userId = selectedEntries[i]!.userId;
+            realPlayersData.push({
+              gameId: newGame.id,
+              userId,
+              role: assignedRole,
+            });
+
+            const realName = userNameMap.get(userId) || null;
+            const fallbackName = `PLAYER_${i + 1}`;
+
+            inMemoryPlayers.push({
+              playerId: userId,
+              role: assignedRole,
+              isDead: false,
+              isBot: false,
+              displayName: realName || fallbackName,
+            });
+          } else {
+            // Bot: Add to Memory ONLY with a random but stable display name
+            const botId = `bot_${uuidv4()}`;
+            const nameIndex =
+              Math.abs(botId.charCodeAt(0) + i) % BOT_NAMES.length;
+            const displayName = BOT_NAMES[nameIndex] || "Bot";
+
+            inMemoryPlayers.push({
+              playerId: botId,
+              role: assignedRole,
+              isDead: false,
+              isBot: true,
+              displayName,
+            });
+          }
+        }
+
+        await tx.gamePlayer.createMany({ data: realPlayersData });
+        logger.debug(`[Match Making ${currency}] Added game players`);
+        await tx.queueEntry.deleteMany({ where: { userId: { in: userIds } } });
+
+        return { newGame, inMemoryPlayers };
+      });
+      gameManager.createGame(result.newGame.id, {
+        id: result.newGame.id,
+        status: "LOBBY",
+        currency: currency,
+        potAmount: result.newGame.potAmount,
+        phaseEndTime: Date.now() + 30000,
+        players: result.inMemoryPlayers,
+        item: randomItem?.name!,
+        hint: randomHint!,
+        chat: [],
+        votes: {},
+        totalRounds: 0,
+        round: 1,
+        lastActivity: Date.now(),
+      });
+
+      // Notify all real players that their match is ready
+      const { io } = require("../app");
+      for (const p of result.inMemoryPlayers) {
+        if (!p.isBot) {
+          io.to(`lobby_${p.playerId}`).emit("matchFound", {
+            gameId: result.newGame.id,
           });
         }
       }
 
-      await tx.gamePlayer.createMany({ data: realPlayersData });
-      logger.debug("[Match Making] Added game players");
-      await tx.queueEntry.deleteMany({ where: { userId: { in: userIds } } });
-
-      return { newGame, inMemoryPlayers };
-    });
-    gameManager.createGame(result.newGame.id, {
-      id: result.newGame.id,
-      status: "LOBBY",
-      currency: "SOL",
-      potAmount: result.newGame.potAmount,
-      phaseEndTime: Date.now() + 30000,
-      players: result.inMemoryPlayers,
-      item: randomItem?.name!,
-      hint: randomHint!,
-      chat: [],
-      votes: {},
-      totalRounds: 0,
-      round: 1,
-      lastActivity: Date.now(),
-    });
-
-    // Notify all real players that their match is ready
-    const { io } = require("../app");
-    for (const p of result.inMemoryPlayers) {
-      if (!p.isBot) {
-        io.to(`lobby_${p.playerId}`).emit("matchFound", {
-          gameId: result.newGame.id,
-        });
-      }
+      logger.debug(
+        `Game ${result.newGame.id} (${currency}) initialized: ${selectedEntries.length} Humans, ${botCount} Bots.`,
+      );
     }
-
-    logger.debug(
-      `Game ${result.newGame.id} initialized: ${selectedEntries.length} Humans, ${botCount} Bots.`,
-    );
   } catch (error: any) {
     logger.error("Matchmaker Error:", error);
   } finally {

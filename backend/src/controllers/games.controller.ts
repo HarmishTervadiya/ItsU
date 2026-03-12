@@ -10,9 +10,11 @@ import { logger } from "../utils/logger";
 import { prisma } from "@itsu/shared/src/lib/prisma";
 import { startMatchMaker } from "../workers/matchmaker";
 import { gameManager } from "../state/gameStore";
-import { Role } from "@itsu/shared/generated/prisma/enums";
+import { Role, Currency } from "@itsu/shared/generated/prisma/enums";
 import { v4 as uuidv4 } from "uuid";
 import type { GameState } from "@itsu/shared/src/types/game";
+import { config } from "../config";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 
 const BOT_NAMES = [
   "DEGEN",
@@ -31,7 +33,8 @@ const BOT_NAMES = [
 const destination = config.ITSU_MAIN_WALLET;
 
 export const pushToGameQueue = asyncHandler(async (req, res) => {
-  const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+  const rpcUrl = config.SOLANA_RPC_URL || clusterApiUrl(config.SOLANA_NETWORK);
+  const connection = new Connection(rpcUrl, "confirmed");
   const { signature } = req.body;
 
   logger.debug(
@@ -78,20 +81,50 @@ export const pushToGameQueue = asyncHandler(async (req, res) => {
   );
 
   // Basic validation: check if destination matches
-  const transferInstruction: any =
-    transaction.transaction.message.instructions.find(
-      (ix: any) => ix.program === "system" && ix.parsed?.type === "transfer",
+  if (existingTransaction.currency === Currency.SOL) {
+    const transferInstruction: any =
+      transaction.transaction.message.instructions.find(
+        (ix: any) => ix.program === "system" && ix.parsed?.type === "transfer",
+      );
+
+    if (
+      !transferInstruction ||
+      transferInstruction.parsed.info.destination !== destination
+    ) {
+      throw new ApiError(
+        400,
+        "INVALID_DESTINATION",
+        "Transaction sent to wrong wallet",
+      );
+    }
+  } else if (existingTransaction.currency === Currency.SKR) {
+    const mintPublicKey = new PublicKey(config.SKR_MINT);
+    const platformAta = await getAssociatedTokenAddress(
+      mintPublicKey,
+      new PublicKey(destination),
+      true,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-  if (
-    !transferInstruction ||
-    transferInstruction.parsed.info.destination !== destination
-  ) {
-    throw new ApiError(
-      400,
-      "INVALID_DESTINATION",
-      "Transaction sent to wrong wallet",
-    );
+    const tokenTransferIx: any =
+      transaction.transaction.message.instructions.find(
+        (ix: any) =>
+          ix.program === "spl-token" &&
+          (ix.parsed?.type === "transfer" ||
+            ix.parsed?.type === "transferChecked"),
+      );
+
+    if (
+      !tokenTransferIx ||
+      tokenTransferIx.parsed.info.destination !== platformAta.toBase58()
+    ) {
+      throw new ApiError(
+        400,
+        "INVALID_DESTINATION",
+        "SKR Token transaction sent to wrong destination ATA",
+      );
+    }
   }
 
   const [updatedTransaction, newQueueEntry] = await prisma.$transaction([
@@ -171,7 +204,6 @@ export const pushToGameQueueTest = asyncHandler(async (req, res) => {
 });
 
 import { MatchStatus } from "@itsu/shared/generated/prisma/enums";
-import { config } from "../config";
 
 export const getActiveGame = asyncHandler(async (req, res) => {
   const userId = req.user?.id;

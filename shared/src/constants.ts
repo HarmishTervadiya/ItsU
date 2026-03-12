@@ -16,3 +16,5 @@ export const STAKE_AMOUNT_LAMPORTS = BigInt(
 );
 
 export const STAKE_AMOUNT_SKR = 100;
+export const SKR_DECIMALS = 4;
+export const STAKE_AMOUNT_SKR_RAW = BigInt(STAKE_AMOUNT_SKR) * BigInt(10 ** SKR_DECIMALS);

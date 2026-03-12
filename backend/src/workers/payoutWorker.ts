@@ -12,6 +12,13 @@ import { prisma } from "@itsu/shared/src/lib/prisma";
 import { logger } from "../utils/logger";
 import { config } from "../config";
 import bs58 from "bs58";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createTransferInstruction,
+  getAssociatedTokenAddress,
+  getOrCreateAssociatedTokenAccount,
+  TOKEN_2022_PROGRAM_ID,
+} from "@solana/spl-token";
 
 export class PayoutWorker {
   private static isProcessing = false;
@@ -91,9 +98,39 @@ export class PayoutWorker {
               }),
             );
           } else if (tx.currency === "SKR") {
-            // TODO: Handle SPL token transfer. Needs Mint Address and Associated Token Accounts.
-            throw new Error(
-              "SKR Token transfer logic not yet implemented for custodial payouts",
+            const mintPublicKey = new PublicKey(config.SKR_MINT);
+
+            // Get source ATA
+            const fromAta = await getAssociatedTokenAddress(
+              mintPublicKey,
+              keypair.publicKey,  
+              true,
+              TOKEN_2022_PROGRAM_ID,
+              ASSOCIATED_TOKEN_PROGRAM_ID
+            );
+
+            // Get destination ATA
+            const toAtaAccount = await getOrCreateAssociatedTokenAccount(
+              connection,
+              keypair,
+              mintPublicKey,
+              toPubkey,
+              true,
+              "confirmed",
+              {commitment: "confirmed"},
+              TOKEN_2022_PROGRAM_ID,
+              ASSOCIATED_TOKEN_PROGRAM_ID
+            );
+
+            transaction.add(
+              createTransferInstruction(
+                fromAta,
+                toAtaAccount.address,
+                keypair.publicKey,
+                tx.amount,
+                [],
+                TOKEN_2022_PROGRAM_ID
+              ),
             );
           }
 

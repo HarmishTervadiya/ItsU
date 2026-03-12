@@ -16,13 +16,15 @@ import { Toast } from "toastify-react-native";
 import { ERROR_MESSAGES, WALLET_REJECTION_ERRORS } from "../constants/errors";
 import { getNonceApi } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
-import { 
-  getAssociatedTokenAddress, 
-  createTransferInstruction, 
+import {
+  getAssociatedTokenAddress,
+  createTransferInstruction,
   createAssociatedTokenAccountInstruction,
   getAccount,
   TokenAccountNotFoundError,
-  TokenInvalidAccountOwnerError
+  TokenInvalidAccountOwnerError,
+  TOKEN_2022_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { SKR_MINT, SKR_DECIMALS } from "../constants";
 
@@ -268,53 +270,128 @@ export const useWallet = () => {
 
   const sendSKR = useCallback(
     async (toAddress: string, amountSKR: number, reference?: PublicKey) => {
-      console.log("[useWallet] sendSKR() called");
-      console.log("[useWallet] to:", toAddress, "amount:", amountSKR);
+      if (!publicKey) throw new Error("Wallet not connected");
 
-      if (!publicKey) {
-        throw new Error("Wallet not connected");
-      }
-
+      console.log(toAddress);
       setSending(true);
+
       try {
         const toPublicKey = new PublicKey(toAddress);
         const mintPublicKey = new PublicKey(SKR_MINT);
-        
+
+        // Fetch sender's actual token accounts for this mint
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+          publicKey,
+          { mint: mintPublicKey, programId: TOKEN_2022_PROGRAM_ID },
+        );
+
+        console.log(
+          "[sendSKR] token accounts found:",
+          tokenAccounts.value.length,
+        );
+        tokenAccounts.value.forEach((acc, i) => {
+          console.log(
+            `[sendSKR] account[${i}]:`,
+            acc.pubkey.toBase58(),
+            "balance:",
+            acc.account.data.parsed.info.tokenAmount.uiAmount,
+          );
+        });
+
+        if (tokenAccounts.value.length === 0) {
+          throw new Error("No token account found for this mint");
+        }
+
+        const fromTokenAccount = tokenAccounts.value.reduce((best, current) => {
+          const bestAmount = BigInt(
+            best.account.data.parsed.info.tokenAmount.amount,
+          );
+          const currentAmount = BigInt(
+            current.account.data.parsed.info.tokenAmount.amount,
+          );
+          return currentAmount > bestAmount ? current : best;
+        });
+
+        const fromAta = fromTokenAccount.pubkey;
+        const toAta = await getAssociatedTokenAddress(
+          mintPublicKey,
+          toPublicKey,
+          false, 
+          TOKEN_2022_PROGRAM_ID
+        );
+
+        console.log("[sendSKR] fromAta:", fromAta.toBase58());
+        console.log("[sendSKR] toAta:", toAta.toBase58());
+        console.log("[sendSKR] mint:", mintPublicKey.toBase58());
+        console.log("[sendSKR] sender:", publicKey.toBase58());
+        console.log("[sendSKR] receiver:", toPublicKey.toBase58());
+
+        const fromAccount = await getAccount(connection, fromAta, "confirmed", TOKEN_2022_PROGRAM_ID);
+        const amount = BigInt(
+          Math.round(amountSKR * Math.pow(10, SKR_DECIMALS)),
+        );
+
+        console.log("[sendSKR] fromAccount mint:", fromAccount.mint.toBase58());
+        console.log(
+          "[sendSKR] fromAccount balance (raw):",
+          fromAccount.amount.toString(),
+        );
+        console.log("[sendSKR] transfer amount (raw):", amount.toString());
+
+        if (fromAccount.amount < amount) {
+          throw new Error(
+            `Insufficient balance: have ${fromAccount.amount}, need ${amount}`,
+          );
+        }
+
         const { blockhash, lastValidBlockHeight } =
           await connection.getLatestBlockhash();
-
-        // Get associated token accounts
-        const fromAta = await getAssociatedTokenAddress(mintPublicKey, publicKey);
-        const toAta = await getAssociatedTokenAddress(mintPublicKey, toPublicKey);
 
         const transaction = new Transaction();
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = publicKey;
 
-        // Check if destination ATA exists, if not add instruction to create it
+        // Create destination ATA if it doesn't exist
+        let toAccountExists = false;
         try {
-          await getAccount(connection, toAta);
-        } catch (error: any) {
-          if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
+          await getAccount(connection, toAta, "confirmed", TOKEN_2022_PROGRAM_ID);
+          toAccountExists = true;
+          console.log("[sendSKR] destination ATA exists");
+        } catch (error) {
+          if (
+            error instanceof TokenAccountNotFoundError ||
+            error instanceof TokenInvalidAccountOwnerError ||
+            (error as Error).name === "TokenAccountNotFoundError"
+          ) {
+            console.log(
+              "[sendSKR] destination ATA missing — adding creation instruction",
+            );
             transaction.add(
               createAssociatedTokenAccountInstruction(
                 publicKey,
                 toAta,
                 toPublicKey,
-                mintPublicKey
-              )
+                mintPublicKey,
+                TOKEN_2022_PROGRAM_ID,
+                ASSOCIATED_TOKEN_PROGRAM_ID
+              ),
             );
           } else {
+            console.error(
+              "[sendSKR] unexpected error checking destination ATA:",
+              error,
+            );
             throw error;
           }
         }
 
-        const amount = BigInt(Math.round(amountSKR * Math.pow(10, SKR_DECIMALS)));
         const transferInstruction = createTransferInstruction(
           fromAta,
           toAta,
           publicKey,
-          amount
+          amount,
+          [],
+          TOKEN_2022_PROGRAM_ID
         );
 
         if (reference) {
@@ -326,6 +403,10 @@ export const useWallet = () => {
         }
 
         transaction.add(transferInstruction);
+        console.log(
+          "[sendSKR] transaction instructions:",
+          transaction.instructions.length,
+        );
 
         const signedTransaction = await transact(
           async (wallet: Web3MobileWallet) => {
@@ -337,10 +418,8 @@ export const useWallet = () => {
             const signedTxs = await wallet.signTransactions({
               transactions: [transaction],
             });
-
-            if (!signedTxs || signedTxs.length === 0) {
+            if (!signedTxs?.length)
               throw new Error("No signed transaction returned from wallet");
-            }
 
             return signedTxs[0];
           },
@@ -355,43 +434,48 @@ export const useWallet = () => {
 
         for (let attempt = 1; attempt <= 3; attempt++) {
           try {
-            console.log(`[useWallet] send attempt ${attempt}...`);
+            console.log(`[sendSKR] send attempt ${attempt}/3`);
             signature = await connection.sendRawTransaction(rawTransaction, {
-              skipPreflight: true,
+              skipPreflight: false,
               maxRetries: 2,
             });
+            console.log("[sendSKR] signature:", signature);
             break;
           } catch (err: any) {
             lastError = err;
-            console.log(`[useWallet] attempt ${attempt} failed:`, err.message);
-            if (attempt < 3) {
+            console.error(`[sendSKR] attempt ${attempt} failed:`, err.message);
+            if (attempt < 3)
               await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
           }
         }
 
-        if (!signature) {
-          throw new Error(lastError?.message || "Failed to send transaction");
-        }
+        if (!signature)
+          throw new Error(lastError?.message ?? "Failed to send transaction");
 
-        console.log("[useWallet] waiting for confirmation...");
+        console.log("[sendSKR] waiting for confirmation...");
         const confirmation = await connection.confirmTransaction(
           { signature, blockhash, lastValidBlockHeight },
           "confirmed",
         );
 
-        if (confirmation.value.err) {
-          throw new Error("Transaction failed during confirmation");
-        }
+        console.log(
+          "[sendSKR] confirmation error:",
+          confirmation.value.err ?? "none",
+        );
 
+        if (confirmation.value.err)
+          throw new Error("Transaction failed during confirmation");
+
+        console.log("[sendSKR] success:", signature);
         return signature;
       } catch (error: any) {
-        console.error("Error while sending SKR:", error);
+        console.error("[sendSKR] caught error:", error?.message);
+        console.error("[sendSKR] full error:", JSON.stringify(error, null, 2));
 
-        let errorMessage = "Failed to send transaction";
         const errorStr =
           error?.message || error?.code || JSON.stringify(error) || "unknown";
 
+        let errorMessage: string;
         if (
           WALLET_REJECTION_ERRORS.some((msg) => String(errorStr).includes(msg))
         ) {
@@ -399,9 +483,9 @@ export const useWallet = () => {
         } else if (errorStr.includes("Network request failed")) {
           errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
         } else if (
-          errorStr.includes("insufficient lamports") ||
-          errorStr.includes("InsufficientFunds") ||
-          errorStr.includes("insufficient funds")
+          /(insufficient lamports|InsufficientFunds|insufficient funds)/.test(
+            errorStr,
+          )
         ) {
           errorMessage = ERROR_MESSAGES["INSUFFICIENT_FUNDS"];
         } else {

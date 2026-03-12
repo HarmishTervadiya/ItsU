@@ -12,4 +12,8 @@ export const config = {
     (process.env.SOLANA_NETWORK as "devnet" | "mainnet-beta" | "testnet") ||
     "devnet",
   SOLANA_RPC_URL: process.env.SOLANA_RPC_URL,
+  STAKE_AMOUNT_SOL: parseFloat(process.env.STAKE_AMOUNT_SOL || "0.01"),
+  STAKE_AMOUNT_SKR: parseFloat(process.env.STAKE_AMOUNT_SKR || "100"),
+  SKR_MINT: "9TiJBH3qPkCCgHG7t9SqyFxDRgmjbgitEurx71YLUMX8",
+  SKR_DECIMALS: "4",
 };
