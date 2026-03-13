@@ -14,6 +14,9 @@ export const config = {
   SOLANA_RPC_URL: process.env.SOLANA_RPC_URL,
   STAKE_AMOUNT_SOL: parseFloat(process.env.STAKE_AMOUNT_SOL || "0.01"),
   STAKE_AMOUNT_SKR: parseFloat(process.env.STAKE_AMOUNT_SKR || "100"),
+  //Todo: Replace with SKR when migrating to mainnet-beta
+  // SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3 and
   SKR_MINT: "9TiJBH3qPkCCgHG7t9SqyFxDRgmjbgitEurx71YLUMX8",
+  // 9
   SKR_DECIMALS: "4",
 };
