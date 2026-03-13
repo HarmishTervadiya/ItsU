@@ -50,3 +50,4 @@ release.keystore
 gradle.properties
 
 publish-dapp.ps1
+publishing
