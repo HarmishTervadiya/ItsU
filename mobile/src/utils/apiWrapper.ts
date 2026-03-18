@@ -8,60 +8,58 @@ type ApiResponse<T> = {
   error: string | null;
 };
 
+type ApiError = {
+  statusCode: string;
+  errorCode: string;
+};
+
 export async function withApiErrorHandler<T>(
   apiCall: () => Promise<T>,
-  showErrorToastOrMessage: boolean | string = true,
+  showToast: boolean = true,
+  overrideMessage?: string,
 ): Promise<ApiResponse<T>> {
   try {
     const result = await apiCall();
     return { data: result, error: null, success: true };
   } catch (error: any) {
-    let errorMessage =
-      typeof showErrorToastOrMessage === "string"
-        ? showErrorToastOrMessage
-        : ERROR_MESSAGES["UNKNOWN_ERROR"];
-
-    if (error instanceof AxiosError) {
-      const serverErrorCode = error.response?.data.errorCode as ErrorCode;
-
-      if (
-        serverErrorCode &&
-        ERROR_MESSAGES[serverErrorCode] &&
-        typeof showErrorToastOrMessage !== "string"
-      ) {
-        errorMessage = ERROR_MESSAGES[serverErrorCode];
-      } else if (typeof showErrorToastOrMessage !== "string") {
-        const status = error.response?.status;
-        if (status === 500)
-          errorMessage = ERROR_MESSAGES["INTERNAL_SERVER_ERROR"];
-        else if (status === 404) errorMessage = `Resource not found.`;
-        else if (
-          error.code === "ECONNABORTED" ||
-          error.message.includes("timeout")
-        ) {
-          errorMessage = ERROR_MESSAGES["TIMEOUT_ERROR"];
-        } else if (
-          error.code === "ERR_NETWORK" ||
-          error.message === "Network Error"
-        ) {
-          errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
-        }
-      }
-
-      console.log(
-        `[API Wrapper] failed with code ${serverErrorCode || error.code}`,
-      );
-    } else {
-      console.log(`[API Wrapper] NON_HTTP ERROR`, error);
-      if (typeof showErrorToastOrMessage !== "string") {
-        errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
-      }
+    const message = resolveErrorMessage(error, overrideMessage);
+    if (showToast) {
+      Toast.error(message);
     }
 
-    if (showErrorToastOrMessage !== false) {
-      Toast.error(errorMessage);
-    }
-
-    return { data: null, error: errorMessage, success: false };
+    return { data: null, error: message, success: false };
   }
+}
+
+function resolveErrorMessage(error: any, overrideMessage?: string): string {
+  if (overrideMessage) return overrideMessage;
+
+  if (error instanceof AxiosError) {
+    return resolveAxiosError(error);
+  }
+
+  console.warn("[API] Non-HTTP Error", error);
+  return ERROR_MESSAGES.NETWORK_ERROR;
+}
+
+function resolveAxiosError(error: AxiosError): string {
+  const data = error.response?.data as ApiError;
+  const serverCode = data.errorCode as ErrorCode | undefined;
+
+  if (serverCode && ERROR_MESSAGES[serverCode]) {
+    return ERROR_MESSAGES[serverCode];
+  }
+
+  const statusCode = error.response?.status;
+  if (statusCode == 500) return ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
+  if (statusCode == 404) return "Resource not found";
+
+  if (error.code === "ECONNABORTED" || error.message.includes("timeout"))
+    return ERROR_MESSAGES.TIMEOUT_ERROR;
+
+  if (error.code === "ERR_NETWORK" || error.message === "Network Error")
+    return ERROR_MESSAGES.UNKNOWN_ERROR;
+
+  console.warn("[API] Unhandled Axios error:", error.code, error.message);
+  return ERROR_MESSAGES.UNKNOWN_ERROR;
 }

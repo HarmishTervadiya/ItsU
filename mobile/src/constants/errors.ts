@@ -39,15 +39,26 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
 };
 
 // --- Wallet rejection errors ---
+
 /**
- * Error strings or codes returned by Solana Mobile Wallet Adapter
- * when a user rejects or cancels a request.
+ * User-facing categories — intentionally coarse.
+ * The user does not need to know the difference between
+ * ExecutionException and InterruptedException.
  */
-export const WALLET_REJECTION_ERRORS = [
-  "User cancel",
-  "Authorization failed",
-  "User declined",
-  "authorization request failed",
-  "-1",
-  "-32602",
-];
+export type WalletErrorCategory =
+  | "USER_CANCELLED"
+  | "NO_WALLET"
+  | "TIMED_OUT"
+  | "CONNECTION_FAILED"
+  | "TRANSACTION_FAILED"
+  | "UNKNOWN";
+
+export const WALLET_ERROR_MESSAGES: Record<WalletErrorCategory, string | null> =
+  {
+    USER_CANCELLED: null,
+    NO_WALLET: "No wallet app found. Please install Phantom or Solflare.",
+    TIMED_OUT: "Wallet didn't respond. Make sure it's open and try again.",
+    CONNECTION_FAILED: "Couldn't connect to your wallet. Please try again.",
+    TRANSACTION_FAILED: "Wallet rejected the request. Please try again.",
+    UNKNOWN: "Something went wrong with your wallet. Please try again.",
+  };

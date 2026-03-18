@@ -13,7 +13,6 @@ import {
 import bs58 from "bs58";
 import { setItem } from "../utils/secureStore";
 import { Toast } from "toastify-react-native";
-import { ERROR_MESSAGES, WALLET_REJECTION_ERRORS } from "../constants/errors";
 import { getNonceApi } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
 import {
@@ -27,6 +26,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { SKR_MINT, SKR_DECIMALS } from "../constants";
+import { getWalletErrorMessage } from "../utils/walletErrorClassifier";
 
 const APP_IDENTITY = {
   name: "ItsU",
@@ -114,25 +114,12 @@ export const useWallet = () => {
       Toast.success("Login successful!");
       console.log("Login successful!");
     } catch (error: any) {
+      console.log(typeof error, error);
       console.error("Connect wallet failed:", error.message);
 
-      let errorMessage = "Something went wrong";
-
-      const errorStr =
-        error?.message || error?.code || JSON.stringify(error) || "unknown";
-
-      if (
-        WALLET_REJECTION_ERRORS.some((msg) => String(errorStr).includes(msg))
-      ) {
-        errorMessage = ERROR_MESSAGES["USER_REJECTED_WALLET"];
-      } else if (errorStr.includes("Network request failed")) {
-        errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
-      } else {
-        // Fallback: don't show the literal "-1" or raw error to the user if we failed to parse it,
-        // default to "Something went wrong" since we initialized it
-      }
-
-      Toast.error(errorMessage);
+      const errorMessage = getWalletErrorMessage(error);
+      console.log(errorMessage);
+      if (errorMessage) Toast.error(errorMessage);
     } finally {
       setConnecting(false);
     }
@@ -239,27 +226,9 @@ export const useWallet = () => {
       } catch (error: any) {
         console.error("Error while sending sol:", error);
 
-        let errorMessage = "Failed to send transaction";
-        const errorStr =
-          error?.message || error?.code || JSON.stringify(error) || "unknown";
+        const errorMessage = getWalletErrorMessage(error);
+        if (errorMessage) Toast.error(errorMessage);
 
-        if (
-          WALLET_REJECTION_ERRORS.some((msg) => String(errorStr).includes(msg))
-        ) {
-          errorMessage = ERROR_MESSAGES["USER_REJECTED_WALLET"];
-        } else if (errorStr.includes("Network request failed")) {
-          errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
-        } else if (
-          errorStr.includes("insufficient lamports") ||
-          errorStr.includes("InsufficientFunds")
-        ) {
-          errorMessage = ERROR_MESSAGES["INSUFFICIENT_FUNDS"];
-        } else {
-          // If we couldn't match the error, make sure we only display a safe string
-          errorMessage = "Failed to send transaction";
-        }
-
-        Toast.error(errorMessage);
         throw error;
       } finally {
         setSending(false);
@@ -316,8 +285,8 @@ export const useWallet = () => {
         const toAta = await getAssociatedTokenAddress(
           mintPublicKey,
           toPublicKey,
-          false, 
-          TOKEN_2022_PROGRAM_ID
+          false,
+          TOKEN_2022_PROGRAM_ID,
         );
 
         console.log("[sendSKR] fromAta:", fromAta.toBase58());
@@ -326,7 +295,12 @@ export const useWallet = () => {
         console.log("[sendSKR] sender:", publicKey.toBase58());
         console.log("[sendSKR] receiver:", toPublicKey.toBase58());
 
-        const fromAccount = await getAccount(connection, fromAta, "confirmed", TOKEN_2022_PROGRAM_ID);
+        const fromAccount = await getAccount(
+          connection,
+          fromAta,
+          "confirmed",
+          TOKEN_2022_PROGRAM_ID,
+        );
         const amount = BigInt(
           Math.round(amountSKR * Math.pow(10, SKR_DECIMALS)),
         );
@@ -354,7 +328,12 @@ export const useWallet = () => {
         // Create destination ATA if it doesn't exist
         let toAccountExists = false;
         try {
-          await getAccount(connection, toAta, "confirmed", TOKEN_2022_PROGRAM_ID);
+          await getAccount(
+            connection,
+            toAta,
+            "confirmed",
+            TOKEN_2022_PROGRAM_ID,
+          );
           toAccountExists = true;
           console.log("[sendSKR] destination ATA exists");
         } catch (error) {
@@ -373,7 +352,7 @@ export const useWallet = () => {
                 toPublicKey,
                 mintPublicKey,
                 TOKEN_2022_PROGRAM_ID,
-                ASSOCIATED_TOKEN_PROGRAM_ID
+                ASSOCIATED_TOKEN_PROGRAM_ID,
               ),
             );
           } else {
@@ -391,7 +370,7 @@ export const useWallet = () => {
           publicKey,
           amount,
           [],
-          TOKEN_2022_PROGRAM_ID
+          TOKEN_2022_PROGRAM_ID,
         );
 
         if (reference) {
@@ -472,27 +451,9 @@ export const useWallet = () => {
         console.error("[sendSKR] caught error:", error?.message);
         console.error("[sendSKR] full error:", JSON.stringify(error, null, 2));
 
-        const errorStr =
-          error?.message || error?.code || JSON.stringify(error) || "unknown";
+        const errorMessage = getWalletErrorMessage(error);
+        if (errorMessage) Toast.error(errorMessage);
 
-        let errorMessage: string;
-        if (
-          WALLET_REJECTION_ERRORS.some((msg) => String(errorStr).includes(msg))
-        ) {
-          errorMessage = ERROR_MESSAGES["USER_REJECTED_WALLET"];
-        } else if (errorStr.includes("Network request failed")) {
-          errorMessage = ERROR_MESSAGES["NETWORK_ERROR"];
-        } else if (
-          /(insufficient lamports|InsufficientFunds|insufficient funds)/.test(
-            errorStr,
-          )
-        ) {
-          errorMessage = ERROR_MESSAGES["INSUFFICIENT_FUNDS"];
-        } else {
-          errorMessage = "Failed to send transaction";
-        }
-
-        Toast.error(errorMessage);
         throw error;
       } finally {
         setSending(false);
