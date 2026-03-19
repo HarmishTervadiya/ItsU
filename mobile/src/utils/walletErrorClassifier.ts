@@ -84,6 +84,5 @@ export function classifyWalletError(error: unknown): WalletErrorCategory {
 }
 
 export function getWalletErrorMessage(error: unknown): string | null {
-  console.log(classifyWalletError(error));
   return WALLET_ERROR_MESSAGES[classifyWalletError(error)];
 }

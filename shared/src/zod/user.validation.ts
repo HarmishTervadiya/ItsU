@@ -5,18 +5,22 @@ export const updateUserSchema = z
     name: z.string().min(2).optional(),
     email: z.string().email().optional(),
     timezone: z
-  .string()
-  .trim()
-  .refine((tz) => {
-    try {
-      new Intl.DateTimeFormat("en-US", { timeZone: tz });
-      return true;
-    } catch {
-      return false;
-    }
-  })
-  .optional(),
+      .string()
+      .trim()
+      .refine((tz) => {
+        try {
+          new Intl.DateTimeFormat("en-US", { timeZone: tz });
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     error: "At least one field must be provided",
   });
+
+export const reportIssueSchema = z.object({
+  description: z.string({ error: "Description cannot be empty" }),
+});

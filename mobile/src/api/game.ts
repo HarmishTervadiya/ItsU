@@ -54,9 +54,9 @@ export interface GameHistoryItem {
 }
 
 export const getGameHistoryApi = () => {
-  // Use a fallback error message as requested by the user
   return withApiErrorHandler<GameHistoryItem[]>(
     () => apiClient.get("/games/history"),
+    true,
     "Could not load your game history right now. Please try again later.",
   );
 };

@@ -6,7 +6,10 @@ import {
   getUserStats,
   reportIssue,
 } from "../controllers/user.controller";
-import { updateUserSchema } from "@itsu/shared/src/zod/user.validation";
+import {
+  reportIssueSchema,
+  updateUserSchema,
+} from "@itsu/shared/src/zod/user.validation";
 
 const router = Router();
 
@@ -15,6 +18,8 @@ router
   .patch(verifyJwt, validateReqBody(updateUserSchema), updateUserData);
 
 router.route("/stats").get(verifyJwt, getUserStats);
-router.route("/report").post(verifyJwt, reportIssue);
+router
+  .route("/report")
+  .post(verifyJwt, validateReqBody(reportIssueSchema), reportIssue);
 
 export default router;

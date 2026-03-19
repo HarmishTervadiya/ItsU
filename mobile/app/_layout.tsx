@@ -12,7 +12,10 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
-import { configureReanimatedLogger, ReanimatedLogLevel } from "react-native-reanimated";
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from "react-native-reanimated";
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -22,6 +25,7 @@ import "../global.css";
 import { useAuthStore } from "@/src/stores/authStore";
 import { useOnboardingStore } from "@/src/stores/onboardingStore";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { AppToastHost } from "@/src/components/ToastConfig";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -90,10 +94,14 @@ function RootLayoutNav() {
     }
   }, [isAuthenticated, hasSeenOnboarding, segments, rootNavigationState?.key]);
 
-  const initialRoute = !hasSeenOnboarding ? "onboarding/index" : isAuthenticated ? "game" : "auth/login";
+  const initialRoute = !hasSeenOnboarding
+    ? "onboarding/index"
+    : isAuthenticated
+      ? "game"
+      : "auth/login";
 
   return (
-    <GestureHandlerRootView>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <Stack
         initialRouteName={initialRoute}
         screenOptions={{
@@ -102,11 +110,15 @@ function RootLayoutNav() {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding/index" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="onboarding/index"
+          options={{ headerShown: false }}
+        />
         <Stack.Screen name="auth/login" options={{ headerShown: false }} />
         <Stack.Screen name="game" />
         <Stack.Screen name="modal" options={{ presentation: "modal" }} />
       </Stack>
+      <AppToastHost />
     </GestureHandlerRootView>
   );
 }

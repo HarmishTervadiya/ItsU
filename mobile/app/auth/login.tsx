@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { View, Text, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import StarField from "@/src/components/StarField";
@@ -7,16 +7,12 @@ import { Ghost, Wallet } from "lucide-react-native";
 import AppIcon from "@/src/assets/images/icons/eye-icon.png";
 import { useWallet } from "@/src/hooks/useWallet";
 import SetUsernameModal from "@/src/components/SetUsernameModal";
-import { apiClient } from "@/src/utils/apiHandler";
+import { primaryHex, accentHex } from "@/src/constants/color";
 
 export default function LoginScreen() {
   const { signInWithSolana, connecting } = useWallet();
 
-  const primaryHex = "#8B5CF6";
-  const accentHex = "#D946EF";
-
   const handleSignIn = () => {
-    console.log("Connect Wallet Pressed");
     signInWithSolana();
   };
 

@@ -39,6 +39,7 @@ export const getUserStats = asyncHandler(async (req, res) => {
     where: { id: userId },
     select: {
       totalSolWon: true,
+      totalSkrWon: true,
     },
   });
 
@@ -69,10 +70,6 @@ export const reportIssue = asyncHandler(async (req, res) => {
 
   if (!userId) {
     throw new ApiError(401, "UNAUTHORIZED", "User not found");
-  }
-
-  if (!description || description.trim() === "") {
-    throw new ApiError(400, "BAD_REQUEST", "Description is required");
   }
 
   const report = await prisma.report.create({
