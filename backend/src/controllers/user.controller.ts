@@ -54,14 +54,16 @@ export const getUserStats = asyncHandler(async (req, res) => {
     },
   });
 
-  return res
-    .status(200)
-    .json(
-      new ApiSuccess(
-        { totalWins, totalSolWon: user.totalSolWon.toString() },
-        "User stats fetched successfully",
-      ),
-    );
+  return res.status(200).json(
+    new ApiSuccess(
+      {
+        totalWins,
+        totalSolWon: user.totalSolWon.toString(),
+        totalSkrWon: user.totalSkrWon.toString(),
+      },
+      "User stats fetched successfully",
+    ),
+  );
 });
 
 export const reportIssue = asyncHandler(async (req, res) => {
@@ -82,4 +84,24 @@ export const reportIssue = asyncHandler(async (req, res) => {
   return res
     .status(201)
     .json(new ApiSuccess(report, "Issue reported successfully"));
+});
+
+export const getUserData = asyncHandler(async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user?.id!, status: "ACTIVE" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      timezone: true,
+    },
+  });
+
+  if (!user) {
+    throw new ApiError(404, "USER_NOT_FOUND", "User does not exist");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiSuccess(user, "User data fetched successfully"));
 });

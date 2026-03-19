@@ -5,6 +5,7 @@ import {
   updateUserData,
   getUserStats,
   reportIssue,
+  getUserData,
 } from "../controllers/user.controller";
 import {
   reportIssueSchema,
@@ -15,6 +16,7 @@ const router = Router();
 
 router
   .route("/")
+  .get(verifyJwt, getUserData)
   .patch(verifyJwt, validateReqBody(updateUserSchema), updateUserData);
 
 router.route("/stats").get(verifyJwt, getUserStats);

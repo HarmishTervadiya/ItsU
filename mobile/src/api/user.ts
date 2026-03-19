@@ -2,6 +2,21 @@ import { Toast } from "toastify-react-native";
 import { apiClient } from "../utils/apiHandler";
 import { withApiErrorHandler } from "../utils/apiWrapper";
 
+export interface RetriveUserDataResponse {
+  id: string;
+  name: string;
+  email: string | null;
+  timezone: string;
+}
+
+export const retriveUserDataApi = () => {
+  return withApiErrorHandler<RetriveUserDataResponse>(
+    () => apiClient.get("/user/"),
+    true,
+    "Could not retrive user data.",
+  );
+};
+
 export interface UpdateUserDataPayload {
   name?: string;
   email?: string;
@@ -24,11 +39,13 @@ export const updateUserDataApi = (data: UpdateUserDataPayload) => {
 export interface UserStatsResponse {
   totalWins: number;
   totalSolWon: string;
+  totalSkrWon: string;
 }
 
 export const getUserStatsApi = () => {
   return withApiErrorHandler<UserStatsResponse>(
     () => apiClient.get("/user/stats"),
+    true,
     "Could not load your stats right now. We'll keep trying.",
   );
 };

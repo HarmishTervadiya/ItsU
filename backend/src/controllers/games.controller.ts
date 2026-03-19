@@ -14,7 +14,11 @@ import { Role, Currency } from "@itsu/shared/generated/prisma/enums";
 import { v4 as uuidv4 } from "uuid";
 import type { GameState } from "@itsu/shared/src/types/game";
 import { config } from "../config";
-import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+  TOKEN_2022_PROGRAM_ID,
+} from "@solana/spl-token";
 
 const BOT_NAMES = [
   "DEGEN",
@@ -104,7 +108,7 @@ export const pushToGameQueue = asyncHandler(async (req, res) => {
       new PublicKey(destination),
       true,
       TOKEN_2022_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
+      ASSOCIATED_TOKEN_PROGRAM_ID,
     );
 
     const tokenTransferIx: any =

@@ -45,7 +45,7 @@ export interface GameHistoryItem {
   isDead: boolean;
   roundsSurvived: number;
   winnings: string;
-  Currency: string;
+  currency: string;
   potAmount: string;
   totalRounds: number;
   winnerRole: string | null;

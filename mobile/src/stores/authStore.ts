@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { deleteItem, getItem, setItem } from "../utils/secureStore";
 import { PublicKey } from "@solana/web3.js";
+import { retriveUserDataApi } from "../api/user";
 
 interface AuthState {
   user: User | null;
@@ -21,6 +22,7 @@ interface AuthState {
   logout: () => void;
   setPublicKey: (publicKey: PublicKey | null) => void;
   completeProfileSetup: (name: string) => void;
+  retriveUserData: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -102,6 +104,16 @@ export const useAuthStore = create<AuthState>()(
           user: state.user ? ({ ...state.user, name } as User) : null,
           isAuthenticated: true,
         }));
+      },
+      retriveUserData: async () => {
+        set({ isLoading: true });
+        const { data, success } = await retriveUserDataApi();
+        if (success && data) {
+          set((state) => ({
+            user: { ...state.user, ...data } as User,
+          }));
+        }
+        set({ isLoading: false });
       },
       setPublicKey: (publicKey: PublicKey | null) => {
         set({ publicKey: publicKey });
