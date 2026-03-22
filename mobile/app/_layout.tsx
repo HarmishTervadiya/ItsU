@@ -22,8 +22,8 @@ configureReanimatedLogger({
   strict: false,
 });
 import "../global.css";
-import { useAuthStore } from "@/src/stores/authStore";
-import { useOnboardingStore } from "@/src/stores/onboardingStore";
+import { authStore } from "@/src/stores/authStore";
+import { onboardingStore } from "@/src/stores/onboardingStore";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AppToastHost } from "@/src/components/ToastConfig";
 
@@ -41,10 +41,10 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  const hydrateAuth = useAuthStore((s) => s.hydrate);
-  const isAuthHydrated = useAuthStore((s) => s.isHydrated);
+  const hydrateAuth = authStore((s) => s.hydrate);
+  const isAuthHydrated = authStore((s) => s.isHydrated);
 
-  const isOnboardingHydrated = useOnboardingStore((s) => s.isHydrated);
+  const isOnboardingHydrated = onboardingStore((s) => s.isHydrated);
 
   useEffect(() => {
     hydrateAuth();
@@ -68,8 +68,8 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const hasSeenOnboarding = useOnboardingStore((s) => s.hasSeenOnboarding);
+  const isAuthenticated = authStore((s) => s.isAuthenticated);
+  const hasSeenOnboarding = onboardingStore((s) => s.hasSeenOnboarding);
 
   const segments = useSegments();
   const rootNavigationState = useRootNavigationState();

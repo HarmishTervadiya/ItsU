@@ -7,8 +7,13 @@ export interface AddStakeTransactionPayload {
   amount: number;
 }
 
-export const addStakeTransactionApi = (data: AddStakeTransactionPayload) => {
-  return withApiErrorHandler(() =>
-    apiClient.post("/transactions/stake/request", data),
+export const addStakeTransactionApi = (
+  data: AddStakeTransactionPayload,
+  signal?: AbortSignal,
+  showToast: boolean = true,
+) => {
+  return withApiErrorHandler(
+    () => apiClient.post("/transactions/stake/request", data, { signal }),
+    showToast,
   );
 };

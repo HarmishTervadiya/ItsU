@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, Animated } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Map as MapIcon, Skull, LogOut } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useGameStore } from "@/src/stores/gameStore";
-import { useAuthStore } from "@/src/stores/authStore";
+import { gameStore } from "@/src/stores/gameStore";
+import { authStore } from "@/src/stores/authStore";
 import StarField from "@/src/components/StarField";
 
 import { ChatPhase } from "@/src/components/game/ChatPhase";
@@ -18,9 +18,9 @@ export default function GameScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
 
-  const { user } = useAuthStore();
+  const { user } = authStore();
   const { game, connectToGame, disconnect, isConnected, error, clearError } =
-    useGameStore();
+    gameStore();
 
   useEffect(() => {
     if (id && user?.id) {

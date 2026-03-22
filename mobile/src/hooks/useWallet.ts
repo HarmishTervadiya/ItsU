@@ -14,7 +14,7 @@ import bs58 from "bs58";
 import { setItem } from "../utils/secureStore";
 import { Toast } from "toastify-react-native";
 import { getNonceApi } from "../api/auth";
-import { useAuthStore } from "../stores/authStore";
+import { authStore } from "../stores/authStore";
 import {
   getAssociatedTokenAddress,
   createTransferInstruction,
@@ -35,8 +35,8 @@ const APP_IDENTITY = {
 };
 
 export const useWallet = () => {
-  const publicKey = useAuthStore((s) => s.publicKey);
-  const setPublicKey = useAuthStore((s) => s.setPublicKey);
+  const publicKey = authStore((s) => s.publicKey);
+  const setPublicKey = authStore((s) => s.setPublicKey);
   const [connecting, setConnecting] = useState<boolean>(false);
   const [sending, setSending] = useState<boolean>(false);
   const cluster = (process.env.EXPO_PUBLIC_SOLANA_NETWORK ?? "devnet") as
@@ -44,7 +44,7 @@ export const useWallet = () => {
     | "mainnet-beta";
   const rpcUrl =
     process.env.EXPO_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
-  const login = useAuthStore((s) => s.login);
+  const login = authStore((s) => s.login);
 
   const connection = useMemo(
     () => new Connection(rpcUrl, "confirmed"),

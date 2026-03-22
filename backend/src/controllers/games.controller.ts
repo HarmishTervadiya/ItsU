@@ -388,3 +388,16 @@ export const createPracticeGame = asyncHandler(async (req, res) => {
     .status(201)
     .json(new ApiSuccess({ gameId }, "Practice game created successfully"));
 });
+
+export const abortMatchFinding = async (userId: string) => {
+  try {
+    await prisma.queueEntry.delete({ where: { userId } });
+    console.debug(
+      { path: `Abort User ${userId}` },
+      "User abortted successfully",
+    );
+    return true;
+  } catch (error) {
+    logger.error({ path: `Abort User ${userId}`, err: error });
+  }
+};

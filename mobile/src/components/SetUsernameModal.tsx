@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { View, Text, Modal, TextInput } from "react-native";
 import { User } from "lucide-react-native";
 import { Toast } from "toastify-react-native";
-import { useAuthStore } from "@/src/stores/authStore";
+import { authStore } from "@/src/stores/authStore";
 import { updateUserDataApi } from "@/src/api/user";
 import GameButton from "@/src/components/GameButton";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function SetUsernameModal() {
-  const user = useAuthStore((s) => s.user);
-  const completeProfileSetup = useAuthStore((s) => s.completeProfileSetup);
+  const user = authStore((s) => s.user);
+  const completeProfileSetup = authStore((s) => s.completeProfileSetup);
   const needsProfileSetup = !!user && !user.name;
 
   const [username, setUsername] = useState("");

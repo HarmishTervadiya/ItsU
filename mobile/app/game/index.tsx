@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SetUsernameModal from "@/src/components/SetUsernameModal";
-import { useAuthStore } from "@/src/stores/authStore";
+import { authStore } from "@/src/stores/authStore";
 import {
   LogOut,
   Gamepad2,
@@ -32,9 +32,10 @@ import ReportModal from "@/src/components/ReportModal";
 import { useFocusEffect } from "@react-navigation/native";
 import { userStore } from "@/src/stores/userStore";
 import { refreshControlHex } from "@/src/constants/color";
+import { gameStore } from "@/src/stores/gameStore";
 
 export default function GameHomeScreen() {
-  const { user, logout, retriveUserData } = useAuthStore();
+  const { user, logout, retriveUserData } = authStore();
   const router = useRouter();
   const [isMatchmaking, setIsMatchmaking] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -42,6 +43,7 @@ export default function GameHomeScreen() {
   const [isMatchmakingLoading, setIsMatchmakingLoading] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const { stats, retriveUserStats } = userStore();
+  const { abortMatchFinding } = gameStore();
 
   const fetchUserData = useCallback(async () => {
     await Promise.all([retriveUserStats(), retriveUserData()]);
@@ -81,6 +83,12 @@ export default function GameHomeScreen() {
     }
     setIsPracticeLoading(false);
   }, [router]);
+
+  const onAbortMatch = () => {
+    abortMatchFinding(user?.id!);
+    setIsMatchmaking(false);
+    setIsMatchmakingLoading(false);
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-[#1a1a24]">
@@ -320,7 +328,7 @@ export default function GameHomeScreen() {
       <SetUsernameModal />
       <MatchmakingModal
         isOpen={isMatchmaking}
-        onClose={() => setIsMatchmaking(false)}
+        onClose={onAbortMatch}
         onMatchFound={(gameId) => {
           setIsMatchmaking(false);
           router.push(`/game/${gameId}`);

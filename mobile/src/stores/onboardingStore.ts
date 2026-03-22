@@ -8,10 +8,10 @@ interface OnboardingState {
 
   hydrate: () => void;
   completeOnboarding: () => void;
-  resetOnboarding: () => void; 
+  resetOnboarding: () => void;
 }
 
-export const useOnboardingStore = create<OnboardingState>()(
+export const onboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       hasSeenOnboarding: false,

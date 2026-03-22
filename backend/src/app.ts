@@ -15,6 +15,7 @@ import { BotEngine } from "./workers/botEngine";
 import http from "http";
 import { Server } from "socket.io";
 import { prisma } from "@itsu/shared/src/lib/prisma";
+import { abortMatchFinding } from "./controllers/games.controller";
 
 const app = express();
 app.use(express.json());
@@ -150,6 +151,13 @@ io.on("connection", async (socket) => {
     if (userId && gameId) {
       gameManager.handlePlayerDisconnect(gameId, userId);
     }
+  });
+
+  socket.on("abortMatchFind", async () => {
+    logger.debug({ message: `Client aborting match finding ${socket.id}` });
+    const userId = socket.data.userId;
+    await abortMatchFinding(userId);
+    socket.disconnect(true);
   });
 });
 

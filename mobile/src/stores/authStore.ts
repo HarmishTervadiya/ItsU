@@ -25,7 +25,7 @@ interface AuthState {
   retriveUserData: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>()(
+export const authStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,

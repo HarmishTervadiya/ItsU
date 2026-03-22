@@ -17,9 +17,10 @@ interface GameStoreState {
   sendChat: (gameId: string, message: string) => void;
   submitVote: (gameId: string, targetId: string) => void;
   executeKill: (gameId: string, targetId: string) => void;
+  abortMatchFinding: (userId: string) => void;
 }
 
-export const useGameStore = create<GameStoreState>((set, get) => ({
+export const gameStore = create<GameStoreState>((set, get) => ({
   game: null,
   socket: null,
   lobbySocket: null,
@@ -115,5 +116,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     if (socket && socket.connected) {
       socket.emit("wolfKill", { gameId, targetId });
     }
+  },
+
+  abortMatchFinding: (userId: string) => {
+    const lobbySocket = get().lobbySocket;
+    if (!lobbySocket) return;
+    lobbySocket.emit("abortMatchFind", { userId });
   },
 }));

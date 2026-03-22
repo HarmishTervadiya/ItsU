@@ -22,6 +22,9 @@ export async function withApiErrorHandler<T>(
     const result = await apiCall();
     return { data: result, error: null, success: true };
   } catch (error: any) {
+    if (error.code === "CanceledError" || error.message === "canceled")
+      return { data: null, error: null, success: false };
+
     const message = resolveErrorMessage(error, overrideMessage);
     if (showToast) {
       Toast.error(message);
