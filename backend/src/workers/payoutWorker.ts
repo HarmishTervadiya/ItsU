@@ -103,10 +103,10 @@ export class PayoutWorker {
             // Get source ATA
             const fromAta = await getAssociatedTokenAddress(
               mintPublicKey,
-              keypair.publicKey,  
+              keypair.publicKey,
               true,
               TOKEN_2022_PROGRAM_ID,
-              ASSOCIATED_TOKEN_PROGRAM_ID
+              ASSOCIATED_TOKEN_PROGRAM_ID,
             );
 
             // Get destination ATA
@@ -117,9 +117,9 @@ export class PayoutWorker {
               toPubkey,
               true,
               "confirmed",
-              {commitment: "confirmed"},
+              { commitment: "confirmed" },
               TOKEN_2022_PROGRAM_ID,
-              ASSOCIATED_TOKEN_PROGRAM_ID
+              ASSOCIATED_TOKEN_PROGRAM_ID,
             );
 
             transaction.add(
@@ -129,7 +129,7 @@ export class PayoutWorker {
                 keypair.publicKey,
                 tx.amount,
                 [],
-                TOKEN_2022_PROGRAM_ID
+                TOKEN_2022_PROGRAM_ID,
               ),
             );
           }

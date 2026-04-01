@@ -9,6 +9,10 @@ const router = Router();
 
 router
   .route("/stake/request")
-  .post(verifyJwt, validateReqBody(insertStakeTransactionSchema), addStakeTransaction);
+  .post(
+    verifyJwt,
+    validateReqBody(insertStakeTransactionSchema),
+    addStakeTransaction,
+  );
 
 export default router;

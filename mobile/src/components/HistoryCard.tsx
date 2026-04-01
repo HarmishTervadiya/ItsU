@@ -15,8 +15,7 @@ export const HistoryCard = ({
 }: GameHistoryItem) => {
   const solPot = lamportsToSol(potAmount, LAMPORTS_PER_SOL);
   const solWon = lamportsToSol(winnings, LAMPORTS_PER_SOL);
-  const isWinner = solWon !== "0";
-
+  const isWinner = parseFloat(solWon) > 0;
   const dateFormatter = new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",

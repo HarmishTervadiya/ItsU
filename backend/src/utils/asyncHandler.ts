@@ -11,5 +11,3 @@ export const asyncHandler = (requestHandler: AsyncRequestHandler) => {
     Promise.resolve(requestHandler(req, res, next)).catch((e) => next(e));
   };
 };
-
-

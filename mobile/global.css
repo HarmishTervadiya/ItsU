@@ -7,21 +7,21 @@
     /* Light Mode Colors */
 
     /* Primary */
-    --color-primary-bg: #8B5CF6;
-    --color-primary-hover-bg: #A78BFA;
-    --color-primary-hover-border: #6D28D9;
-    --color-primary-hex: #8B5CF6;
-    --color-primary-dark-hex: #6D28D9;
+    --color-primary-bg: #8b5cf6;
+    --color-primary-hover-bg: #a78bfa;
+    --color-primary-hover-border: #6d28d9;
+    --color-primary-hex: #8b5cf6;
+    --color-primary-dark-hex: #6d28d9;
 
     /* Accent */
-    --color-accent-bg: #D946EF;
-    --color-accent-hover-bg: #E879F9;
-    --color-accent-border: #A21CAF;
-    --color-accent-hex: #D946EF;
-    --color-accent-dark-hex: #A21CAF;
+    --color-accent-bg: #d946ef;
+    --color-accent-hover-bg: #e879f9;
+    --color-accent-border: #a21caf;
+    --color-accent-hex: #d946ef;
+    --color-accent-dark-hex: #a21caf;
 
     /* Background */
-    --color-bg-panel: #2C2F48;
+    --color-bg-panel: #2c2f48;
     --color-background: #161623;
   }
 

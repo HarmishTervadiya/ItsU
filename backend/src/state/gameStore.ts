@@ -7,7 +7,7 @@ import { PayoutWorker } from "../workers/payoutWorker";
 import { config } from "../config";
 
 const PHASE_DURATIONS = {
-  LOBBY: 7000,
+  LOBBY: 3000,
   CHAT_PHASE: 45000,
   NIGHT_PHASE: 10000,
   VOTE_PHASE: 15000,
@@ -133,23 +133,24 @@ class GameManager {
     if (!game) return;
 
     if (
-      this.getAlivePlayer(game, senderId) &&
-      config.NODE_ENV === "development"
-    ) {
-      // Debug Win Command - To simulate the real user win situation
-      if (message.trim().toLowerCase() === "/win") {
-        logger.info(
-          { gameId, userId: senderId },
-          "[Debug] Win command triggered",
-        );
-        this.executeDebugWin(gameId, senderId);
-        return;
-      }
+      !this.getAlivePlayer(game, senderId) &&
+      config.NODE_ENV !== "development"
+    )
+      return;
 
-      game.chat.push({ senderId, text: message, timestamp: Date.now() });
-      game.lastActivity = Date.now();
-      this.broadcast(gameId, game);
+    if (message.trim().toLowerCase() === "/win") {
+      // Debug Win Command - To simulate the real user win situation
+      logger.info(
+        { gameId, userId: senderId },
+        "[Debug] Win command triggered",
+      );
+      this.executeDebugWin(gameId, senderId);
+      return;
     }
+
+    game.chat.push({ senderId, text: message, timestamp: Date.now() });
+    game.lastActivity = Date.now();
+    this.broadcast(gameId, game);
   }
 
   public addVote(gameId: string, voterId: string, votedPlayerId: string) {
@@ -222,6 +223,7 @@ class GameManager {
           const victim = this.getAlivePlayer(game, game.nightKillId);
           if (victim) {
             victim.isDead = true;
+
             if (!game.isPractice && !victim.isBot) {
               prisma.gamePlayer
                 .update({
@@ -239,8 +241,9 @@ class GameManager {
                 );
             }
           }
-          game.nightKillId = undefined; // Reset for next night
         }
+
+        game.nightKillId = undefined;
 
         if (!this.isGameFinished(gameId)) {
           game.status = "VOTE_PHASE";
@@ -249,7 +252,6 @@ class GameManager {
         break;
       case "VOTE_PHASE":
         this.processVotes(gameId);
-
         if (!this.isGameFinished(gameId)) {
           game.status = "CHAT_PHASE";
           game.totalRounds++;
@@ -277,6 +279,8 @@ class GameManager {
     let maxVotes = 0;
 
     for (const [playerId, count] of Object.entries(voteCounts)) {
+      // TODO: Need to handle the tie case where we will skip killing,
+      // this needs to done simultaneously with UI
       if (count > maxVotes) {
         maxVotes = count;
         highestVotedId = playerId;
@@ -458,7 +462,7 @@ class GameManager {
           });
 
           // Update roundsSurvived for players who lived until the end
-          // For winners, we also update their winnings in the same call
+          // For winners, update their winnings in the same call
           const winnerIds = new Set(winners.map((w) => w.playerId));
 
           for (const player of game.players) {
@@ -508,16 +512,15 @@ class GameManager {
           }
         },
         {
-          maxWait: 5000, // Wait up to 5s for a connection
-          timeout: 10000, // Total transaction timeout 10s
+          maxWait: 5000,
+          timeout: 10000,
         },
       );
 
       logger.info(
         `Payouts successfully calculated and recorded for Game ${gameId}. Winners: ${winners.length}`,
       );
-      // Trigger the Web3 worker to process the PENDING transactions asynchronously
-      // It handles fetching pending ones and dispatching them on-chain.
+      // Web3 worker to process the PENDING transactions asynchronously
       PayoutWorker.processPendingPayouts().catch((err: any) => {
         logger.error({ error: err.message }, "Background PayoutWorker failed");
       });
@@ -529,6 +532,13 @@ class GameManager {
       await prisma.game
         .update({ where: { id: gameId }, data: { status: "SERVER_ERROR" } })
         .catch(console.error);
+    } finally {
+      for (const [key, timer] of this.disconnectTimers.entries()) {
+        if (key.startsWith(gameId)) {
+          clearTimeout(timer);
+          this.disconnectTimers.delete(key);
+        }
+      }
     }
   }
 }

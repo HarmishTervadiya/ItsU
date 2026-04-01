@@ -5,7 +5,7 @@ type StakeCurrency = "SOL" | "SKR";
 //Todo: Replace with SKR when migrating to mainnet-beta
 const SKR_DECIMALS = 4 as const; // 9
 // SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3
-const SKR_MINT = "9TiJBH3qPkCCgHG7t9SqyFxDRgmjbgitEurx71YLUMX8" as const; 
+const SKR_MINT = "9TiJBH3qPkCCgHG7t9SqyFxDRgmjbgitEurx71YLUMX8" as const;
 
 function requireEnvFloat(key: string, fallback: number): number {
   const raw = process.env[key];

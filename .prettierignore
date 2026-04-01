@@ -1,0 +1,32 @@
+# Dependencies
+**/node_modules
+
+# Monorepo/build tooling
+.turbo
+**/.turbo
+
+# Mobile native/generated artifacts
+mobile/android
+mobile/ios
+**/.cxx
+**/.gradle
+**/build
+
+# Expo/Metro outputs
+mobile/.expo
+mobile/dist
+mobile/web-build
+
+# Common outputs/caches
+**/dist
+**/out
+**/coverage
+**/.cache
+**/*.tsbuildinfo
+
+# Environment files
+**/.env
+**/.env.*
+
+# Generated code
+shared/generated

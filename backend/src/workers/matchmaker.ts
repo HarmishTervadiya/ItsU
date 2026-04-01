@@ -7,7 +7,10 @@ import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { logger } from "../utils/logger";
 import { v4 as uuidv4 } from "uuid";
 import { config } from "../config";
-import { STAKE_AMOUNT_LAMPORTS, STAKE_AMOUNT_SKR_RAW } from "@itsu/shared/src/constants";
+import {
+  STAKE_AMOUNT_LAMPORTS,
+  STAKE_AMOUNT_SKR_RAW,
+} from "@itsu/shared/src/constants";
 
 const BOT_NAMES = [
   "DEGEN",
@@ -60,7 +63,9 @@ export async function matchMaker() {
       let botCount = 0;
 
       if (currencyEntries.length >= 6) {
-        logger.debug(`[Match Making ${currency}] 6+ players found, picking 6 randomly`);
+        logger.debug(
+          `[Match Making ${currency}] 6+ players found, picking 6 randomly`,
+        );
         // Shuffle to avoid friends who joined together always matching
         const shuffled = shuffleArray(currencyEntries);
         selectedEntries = shuffled.slice(0, 6);
@@ -69,7 +74,9 @@ export async function matchMaker() {
         // Still check the oldest entry for the 60s timeout (entries are ordered by joinedAt asc)
         const timeElapsed = Date.now() - currencyEntries[0]!.joinedAt.getTime();
         if (timeElapsed > 30000) {
-          logger.debug(`[Match Making ${currency}] Timeout reached, adding bot players`);
+          logger.debug(
+            `[Match Making ${currency}] Timeout reached, adding bot players`,
+          );
           selectedEntries = shuffleArray(currencyEntries);
           botCount = 6 - selectedEntries.length;
         }
@@ -117,7 +124,10 @@ export async function matchMaker() {
             txIdsToUpdate.push(t.id);
           } else {
             // Fallback for test queues where no transaction exists
-            calculatedPot += currency === Currency.SOL ? STAKE_AMOUNT_LAMPORTS : STAKE_AMOUNT_SKR_RAW;
+            calculatedPot +=
+              currency === Currency.SOL
+                ? STAKE_AMOUNT_LAMPORTS
+                : STAKE_AMOUNT_SKR_RAW;
           }
         }
 
@@ -143,8 +153,11 @@ export async function matchMaker() {
         logger.debug(`[Match Making ${currency}] Assigning wolf role`);
 
         const wolfIndex = Math.floor(Math.random() * 6);
-        const realPlayersData: { gameId: string; userId: string; role: Role }[] =
-          [];
+        const realPlayersData: {
+          gameId: string;
+          userId: string;
+          role: Role;
+        }[] = [];
         const inMemoryPlayers: GameState["players"] = [];
 
         // Preload user names so we can attach real display names
@@ -229,7 +242,7 @@ export async function matchMaker() {
       );
     }
   } catch (error: any) {
-    logger.error("Matchmaker Error:", error);
+    logger.error(`Matchmaker Error: ${error.message}`);
   } finally {
     if (isRunning) {
       matchMakerTimer = setTimeout(matchMaker, TICK_TIME);

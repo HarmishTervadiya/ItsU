@@ -15,9 +15,8 @@ export async function chatCompletionGemini(
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        maxOutputTokens: 40
+        maxOutputTokens: 40,
       },
-      
     });
     return response.text || null;
   } catch (e: any) {

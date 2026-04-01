@@ -139,7 +139,8 @@ export default function GameScreen() {
     const updateTimer = () => {
       const remaining = Math.max(
         0,
-        Math.floor((game.phaseEndTime - Date.now()) / 1000),
+        // TODO: Add realtime phase count down
+        Math.ceil((game.phaseEndTime - Date.now()) / 1000) + 7, //To adjust the delay with server and transition
       );
       setTimeLeft(remaining);
     };
@@ -203,13 +204,6 @@ export default function GameScreen() {
               >
                 <LogOut size={20} color="#D946EF" strokeWidth={3} />
               </TouchableOpacity>
-              {phase !== "FINISHED" && phase !== "REVEAL" && timeLeft > 0 && (
-                <View className="bg-[#12121A] border-2 border-primary/50 px-3 py-1.5 rounded-xl self-start">
-                  <Text className="w-full text-center text-primary font-bold font-mono text-sm">
-                    {timeLeft}s
-                  </Text>
-                </View>
-              )}
             </View>
 
             {/* Center: Phase label */}
@@ -236,6 +230,13 @@ export default function GameScreen() {
               )}
             </View>
           </View>
+          {phase !== "FINISHED" && phase !== "REVEAL" && timeLeft > 0 && (
+            <View className="bg-[#12121A] border-2 border-primary/50 px-3 py-1.5 rounded-xl self-start">
+              <Text className="w-full text-center text-primary font-bold font-mono text-sm">
+                {timeLeft}s
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Players View — positioned in top half, pointer-events none so buttons below work */}

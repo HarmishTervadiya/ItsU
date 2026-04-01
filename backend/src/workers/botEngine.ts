@@ -47,7 +47,10 @@ export class BotEngine {
         this.botClients.delete(key);
       } else if (state.status === "LOBBY" && !this.botClients.has(key)) {
         const botIndex = inGameBots.indexOf(bot);
-        this.botClients.set(key, botIndex === 1 || botIndex === 4 ? "gemini" : "groq");
+        this.botClients.set(
+          key,
+          botIndex === 1 || botIndex === 4 ? "gemini" : "groq",
+        );
       }
     }
 
